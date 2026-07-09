@@ -9,8 +9,6 @@ import (
 	"mycourses/internal/db"
 	"mycourses/internal/models"
 
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/mongo"
 )
 
 func appNameDefault() string {
@@ -372,13 +370,13 @@ var SystemDefaults = []models.ConfigVar{
 
 // Seed inserts any missing system-defined variables into the database.
 // Existing variables are not overwritten.
-func Seed(ctx context.Context, database *db.MongoDB) error {
+func Seed(ctx context.Context, database *db.DB) error {
 	col := database.ConfigVars()
 	now := time.Now()
 
 	for _, def := range SystemDefaults {
-		err := col.FindOne(ctx, bson.M{"name": def.Name}).Err()
-		if err == mongo.ErrNoDocuments {
+		err := col.FindOne(ctx, nil).Err()
+		if err == nil {
 			def.CreatedAt = now
 			def.UpdatedAt = now
 			if _, insertErr := col.InsertOne(ctx, def); insertErr != nil {

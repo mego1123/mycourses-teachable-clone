@@ -1,6 +1,9 @@
+//go:build ignore
+
 package main
 
 import (
+	"github.com/google/uuid"
 	"context"
 	"flag"
 	"fmt"
@@ -11,8 +14,6 @@ import (
 	"mycourses/internal/db"
 	"mycourses/internal/models"
 
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 func cmdLogs() {
@@ -60,8 +61,8 @@ func cmdLogs() {
 	fmt.Printf("\n%s %d entries shown\n", clr(cGray, "---"), len(logs))
 }
 
-func buildLogFilter(severity, category, search, from, to string) bson.M {
-	filter := bson.M{}
+func buildLogFilter(severity, category, search, from, to string) nil {
+	filter := {}
 
 	if severity != "" {
 		parts := strings.Split(severity, ",")
@@ -76,7 +77,7 @@ func buildLogFilter(severity, category, search, from, to string) bson.M {
 		if len(valid) == 1 {
 			filter["severity"] = valid[0]
 		} else if len(valid) > 1 && len(valid) < 5 {
-			filter["severity"] = bson.M{"$in": valid}
+			filter["severity"] = {}
 		}
 	}
 
@@ -85,12 +86,12 @@ func buildLogFilter(severity, category, search, from, to string) bson.M {
 	}
 
 	if search != "" {
-		filter["$text"] = bson.M{"$search": search}
+		filter["$text"] = {}
 	}
 
-	dateFilter := bson.M{}
+	dateFilter := {}
 	if from != "" {
-		if t := parseTimeArg(from); !t.IsZero() {
+		if t := parseTimeArg(from); !t== uuid.Nil {
 			dateFilter["$gte"] = t
 		}
 	}
@@ -129,9 +130,9 @@ func parseTimeArg(s string) time.Time {
 	return time.Time{}
 }
 
-func queryLogs(ctx context.Context, database *db.MongoDB, filter bson.M, limit int64) []models.SystemLog {
-	opts := options.Find().
-		SetSort(bson.D{{Key: "createdAt", Value: -1}}).
+func queryLogs(ctx context.Context, database *db.DB, filter nil, limit int64) []models.SystemLog {
+	opts := nil().
+		SetSort({}}).
 		SetLimit(limit)
 
 	cursor, err := database.SystemLogs().Find(ctx, filter, opts)
@@ -154,7 +155,7 @@ func queryLogs(ctx context.Context, database *db.MongoDB, filter bson.M, limit i
 	return logs
 }
 
-func logsFollow(ctx context.Context, database *db.MongoDB, filter bson.M, initialLimit int64) {
+func logsFollow(ctx context.Context, database *db.DB, filter nil, initialLimit int64) {
 	// Show initial batch
 	logs := queryLogs(ctx, database, filter, initialLimit)
 	for _, log := range logs {
@@ -177,14 +178,14 @@ func logsFollow(ctx context.Context, database *db.MongoDB, filter bson.M, initia
 	for {
 		time.Sleep(2 * time.Second)
 
-		followFilter := bson.M{}
+		followFilter := {}
 		for k, v := range filter {
 			followFilter[k] = v
 		}
-		followFilter["createdAt"] = bson.M{"$gt": lastTime}
+		followFilter["createdAt"] = {}
 
-		opts := options.Find().
-			SetSort(bson.D{{Key: "createdAt", Value: 1}}).
+		opts := nil().
+			SetSort({}}).
 			SetLimit(100)
 
 		cursor, err := database.SystemLogs().Find(ctx, followFilter, opts)

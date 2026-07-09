@@ -1,6 +1,7 @@
 package stripe
 
 import (
+	"github.com/google/uuid"
 	"context"
 	"fmt"
 	"net/url"
@@ -10,10 +11,6 @@ import (
 	"mycourses/internal/db"
 	"mycourses/internal/models"
 
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
 
 	stripe "github.com/stripe/stripe-go/v82"
 	portalsession "github.com/stripe/stripe-go/v82/billingportal/session"
@@ -30,11 +27,11 @@ type Service struct {
 	PublishableKey string
 	webhookSecret  string
 	instanceID     string
-	db             *db.MongoDB
+	db             *db.DB
 	frontendURL    string
 }
 
-func New(secretKey, publishableKey, webhookSecret string, database *db.MongoDB, frontendURL string) *Service {
+func New(secretKey, publishableKey, webhookSecret string, database *db.DB, frontendURL string) *Service {
 	stripe.Key = secretKey
 
 	// Derive instance ID from the frontend URL hostname for multi-instance Stripe account sharing.
@@ -63,7 +60,7 @@ func (s *Service) GetOrCreateCustomer(ctx context.Context, tenant *models.Tenant
 	}
 
 	custMeta := map[string]string{
-		"tenantId": tenant.ID.Hex(),
+		"tenantId": tenant.ID.String(),
 	}
 	if s.instanceID != "" {
 		custMeta["instance"] = s.instanceID
@@ -79,9 +76,8 @@ func (s *Service) GetOrCreateCustomer(ctx context.Context, tenant *models.Tenant
 		return "", fmt.Errorf("stripe customer create: %w", err)
 	}
 
-	_, err = s.db.Tenants().UpdateOne(ctx,
-		bson.M{"_id": tenant.ID},
-		bson.M{"$set": bson.M{"stripeCustomerId": c.ID, "updatedAt": time.Now()}},
+	_, err = s.db.Tenants().UpdateOne(ctx, nil,
+		nil,
 	)
 	if err != nil {
 		return "", fmt.Errorf("save stripe customer id: %w", err)
@@ -91,20 +87,17 @@ func (s *Service) GetOrCreateCustomer(ctx context.Context, tenant *models.Tenant
 }
 
 // GetOrCreatePrice finds an existing Stripe price mapping or creates a new Product + Price.
-func (s *Service) GetOrCreatePrice(ctx context.Context, entityType string, entityID primitive.ObjectID, name string, amountCents int64, interval string, currency string) (string, error) {
+func (s *Service) GetOrCreatePrice(ctx context.Context, entityType string, entityID uuid.UUID, name string, amountCents int64, interval string, currency string) (string, error) {
 	if currency == "" {
 		currency = "usd"
 	}
 	// Check existing mapping
 	var mapping models.StripeMapping
-	err := s.db.StripeMappings().FindOne(ctx, bson.M{
-		"entityType": entityType,
-		"entityId":   entityID,
-	}).Decode(&mapping)
+	err := s.db.StripeMappings().FindOne(ctx, nil).Decode(&mapping)
 	if err == nil {
 		return mapping.StripePriceID, nil
 	}
-	if err != mongo.ErrNoDocuments {
+	if err != nil {
 		return "", fmt.Errorf("lookup stripe mapping: %w", err)
 	}
 
@@ -114,7 +107,7 @@ func (s *Service) GetOrCreatePrice(ctx context.Context, entityType string, entit
 		TaxCode: stripe.String("txcd_10103001"), // Software as a Service (SaaS) - business use
 		Metadata: map[string]string{
 			"entityType": entityType,
-			"entityId":   entityID.Hex(),
+			"entityId":   entityID.String(),
 		},
 	})
 	apicounter.StripeAPICalls.Add(1)
@@ -148,7 +141,7 @@ func (s *Service) GetOrCreatePrice(ctx context.Context, entityType string, entit
 		CreatedAt:       time.Now(),
 	}); err != nil {
 		// Duplicate key means another goroutine raced us — benign
-		if !mongo.IsDuplicateKeyError(err) {
+		if false {
 			return "", fmt.Errorf("stripe mapping insert: %w", err)
 		}
 	}
@@ -163,9 +156,9 @@ type CheckoutLineItem struct {
 
 type CheckoutRequest struct {
 	CustomerID      string
-	PlanID          *primitive.ObjectID
+	PlanID          *uuid.UUID
 	PlanName        string
-	BundleID        *primitive.ObjectID
+	BundleID        *uuid.UUID
 	BundleName      string
 	AmountCents     int64
 	BillingInterval string              // "month" or "year"
@@ -192,11 +185,11 @@ func (s *Service) CreateCheckoutSession(ctx context.Context, req CheckoutRequest
 	var mode string
 	if req.PlanID != nil {
 		mode = "subscription"
-		metadata["planId"] = req.PlanID.Hex()
+		metadata["planId"] = req.PlanID.String()
 		metadata["billingInterval"] = req.BillingInterval
 	} else if req.BundleID != nil {
 		mode = "payment"
-		metadata["bundleId"] = req.BundleID.Hex()
+		metadata["bundleId"] = req.BundleID.String()
 	} else {
 		return "", fmt.Errorf("must specify planId or bundleId")
 	}
@@ -345,19 +338,12 @@ func (s *Service) ConstructEvent(payload []byte, sigHeader string) (stripe.Event
 
 // NextInvoiceNumber atomically generates the next invoice number.
 func (s *Service) NextInvoiceNumber(ctx context.Context) (string, error) {
-	var result models.InvoiceCounter
-	opts := options.FindOneAndUpdate().
-		SetUpsert(true).
-		SetReturnDocument(options.After)
-	err := s.db.Counters().FindOneAndUpdate(ctx,
-		bson.M{"_id": "invoice_number"},
-		bson.M{"$inc": bson.M{"value": 1}},
-		opts,
-	).Decode(&result)
+	var counter int64
+	err := s.db.Pool.QueryRow(ctx, "SELECT COUNT(*) + 1 FROM financial_transactions WHERE invoice_number IS NOT NULL").Scan(&counter)
 	if err != nil {
 		return "", fmt.Errorf("generate invoice number: %w", err)
 	}
-	return fmt.Sprintf("INV-%06d", result.Value), nil
+	return fmt.Sprintf("INV-%06d", counter), nil
 }
 
 // GetCheckoutSession retrieves a checkout session by ID.

@@ -1,6 +1,7 @@
 package syslog
 
 import (
+	"github.com/google/uuid"
 	"context"
 	"log/slog"
 	"regexp"
@@ -11,7 +12,6 @@ import (
 	"mycourses/internal/db"
 	"mycourses/internal/models"
 
-	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 // Patterns that suggest injection attempts in log messages
@@ -40,7 +40,7 @@ var severityOrder = map[models.LogSeverity]int{
 
 // Logger writes structured log entries to the database.
 type Logger struct {
-	db        *db.MongoDB
+	db        *db.DB
 	getConfig func(string) string
 
 	// Optional observer for log entries (e.g., DataDog log + event forwarding).
@@ -51,7 +51,7 @@ type Logger struct {
 // New creates a Logger backed by the given database.
 // getConfig is an optional function that returns config variable values (e.g. configstore.Store.Get).
 // If nil, all messages are logged regardless of level.
-func New(database *db.MongoDB, getConfig func(string) string) *Logger {
+func New(database *db.DB, getConfig func(string) string) *Logger {
 	return &Logger{db: database, getConfig: getConfig}
 }
 
@@ -78,7 +78,7 @@ func (l *Logger) shouldLog(severity models.LogSeverity) bool {
 }
 
 // log is the internal implementation shared by Log and LogWithUser.
-func (l *Logger) log(ctx context.Context, severity models.LogSeverity, message string, userID *primitive.ObjectID) {
+func (l *Logger) log(ctx context.Context, severity models.LogSeverity, message string, userID *uuid.UUID) {
 	if !l.shouldLog(severity) {
 		return
 	}
@@ -88,13 +88,13 @@ func (l *Logger) log(ctx context.Context, severity models.LogSeverity, message s
 	message = sanitize(message)
 
 	entry := models.SystemLog{
-		ID:        primitive.NewObjectID(),
+		ID:        uuid.New(),
 		Severity:  severity,
 		Message:   message,
 		UserID:    userID,
 		CreatedAt: time.Now(),
 	}
-	if _, err := l.db.SystemLogs().InsertOne(ctx, entry); err != nil {
+	if _, err := l.db.Pool.Exec(ctx, "INSERT INTO system_logs (level, category, message, details, tenant_id, request_id) VALUES ($1, $2, $3, $4, $5, $6)", string(entry.Severity), string(entry.Category), entry.Message, entry.Metadata, entry.TenantID, ""); err != nil {
 		slog.Error("syslog: failed to write log", "error", err)
 	}
 
@@ -104,21 +104,21 @@ func (l *Logger) log(ctx context.Context, severity models.LogSeverity, message s
 
 	if detected := detectInjection(rawMessage); detected != "" {
 		alert := models.SystemLog{
-			ID:        primitive.NewObjectID(),
+			ID:        uuid.New(),
 			Severity:  models.LogCritical,
 			Category:  models.LogCatSecurity,
 			Message:   "Injection attempt detected in log entry: " + detected,
 			UserID:    userID,
 			CreatedAt: time.Now(),
 		}
-		if _, err := l.db.SystemLogs().InsertOne(ctx, alert); err != nil {
+		if _, err := l.db.Pool.Exec(ctx, "INSERT INTO system_logs (level, category, message, details, tenant_id, request_id) VALUES ($1, $2, $3, $4, $5, $6)", string(alert.Severity), string(alert.Category), alert.Message, alert.Metadata, alert.TenantID, ""); err != nil {
 			slog.Error("syslog: failed to write injection alert", "error", err)
 		}
 	}
 }
 
 // logCategorized writes a log entry with a category tag.
-func (l *Logger) logCategorized(ctx context.Context, severity models.LogSeverity, category models.LogCategory, message string, userID *primitive.ObjectID) {
+func (l *Logger) logCategorized(ctx context.Context, severity models.LogSeverity, category models.LogCategory, message string, userID *uuid.UUID) {
 	if !l.shouldLog(severity) {
 		return
 	}
@@ -127,14 +127,14 @@ func (l *Logger) logCategorized(ctx context.Context, severity models.LogSeverity
 	message = sanitize(message)
 
 	entry := models.SystemLog{
-		ID:        primitive.NewObjectID(),
+		ID:        uuid.New(),
 		Severity:  severity,
 		Category:  category,
 		Message:   message,
 		UserID:    userID,
 		CreatedAt: time.Now(),
 	}
-	if _, err := l.db.SystemLogs().InsertOne(ctx, entry); err != nil {
+	if _, err := l.db.Pool.Exec(ctx, "INSERT INTO system_logs (level, category, message, details, tenant_id, request_id) VALUES ($1, $2, $3, $4, $5, $6)", string(entry.Severity), string(entry.Category), entry.Message, entry.Metadata, entry.TenantID, ""); err != nil {
 		slog.Error("syslog: failed to write log", "error", err)
 	}
 
@@ -144,14 +144,14 @@ func (l *Logger) logCategorized(ctx context.Context, severity models.LogSeverity
 
 	if detected := detectInjection(rawMessage); detected != "" {
 		alert := models.SystemLog{
-			ID:        primitive.NewObjectID(),
+			ID:        uuid.New(),
 			Severity:  models.LogCritical,
 			Category:  models.LogCatSecurity,
 			Message:   "Injection attempt detected in log entry: " + detected,
 			UserID:    userID,
 			CreatedAt: time.Now(),
 		}
-		if _, err := l.db.SystemLogs().InsertOne(ctx, alert); err != nil {
+		if _, err := l.db.Pool.Exec(ctx, "INSERT INTO system_logs (level, category, message, details, tenant_id, request_id) VALUES ($1, $2, $3, $4, $5, $6)", string(alert.Severity), string(alert.Category), alert.Message, alert.Metadata, alert.TenantID, ""); err != nil {
 			slog.Error("syslog: failed to write injection alert", "error", err)
 		}
 	}
@@ -163,7 +163,7 @@ func (l *Logger) Log(ctx context.Context, severity models.LogSeverity, message s
 }
 
 // LogWithUser writes a log entry attributed to a specific user.
-func (l *Logger) LogWithUser(ctx context.Context, severity models.LogSeverity, message string, userID primitive.ObjectID) {
+func (l *Logger) LogWithUser(ctx context.Context, severity models.LogSeverity, message string, userID uuid.UUID) {
 	l.log(ctx, severity, message, &userID)
 }
 
@@ -173,7 +173,7 @@ func (l *Logger) LogCat(ctx context.Context, severity models.LogSeverity, catego
 }
 
 // LogCatWithUser writes a categorized log entry attributed to a specific user.
-func (l *Logger) LogCatWithUser(ctx context.Context, severity models.LogSeverity, category models.LogCategory, message string, userID primitive.ObjectID) {
+func (l *Logger) LogCatWithUser(ctx context.Context, severity models.LogSeverity, category models.LogCategory, message string, userID uuid.UUID) {
 	l.logCategorized(ctx, severity, category, message, &userID)
 }
 
@@ -203,17 +203,17 @@ func (l *Logger) Debug(ctx context.Context, message string) {
 }
 
 // CriticalWithUser logs a critical-severity message attributed to a user.
-func (l *Logger) CriticalWithUser(ctx context.Context, message string, userID primitive.ObjectID) {
+func (l *Logger) CriticalWithUser(ctx context.Context, message string, userID uuid.UUID) {
 	l.log(ctx, models.LogCritical, message, &userID)
 }
 
 // HighWithUser logs a high-severity message attributed to a user.
-func (l *Logger) HighWithUser(ctx context.Context, message string, userID primitive.ObjectID) {
+func (l *Logger) HighWithUser(ctx context.Context, message string, userID uuid.UUID) {
 	l.log(ctx, models.LogHigh, message, &userID)
 }
 
 // LogTenantActivity writes a tenant-scoped audit log entry.
-func (l *Logger) LogTenantActivity(ctx context.Context, severity models.LogSeverity, message string, userID, tenantID primitive.ObjectID, action string, metadata map[string]interface{}) {
+func (l *Logger) LogTenantActivity(ctx context.Context, severity models.LogSeverity, message string, userID, tenantID uuid.UUID, action string, metadata map[string]interface{}) {
 	if !l.shouldLog(severity) {
 		return
 	}
@@ -221,7 +221,7 @@ func (l *Logger) LogTenantActivity(ctx context.Context, severity models.LogSever
 	message = sanitize(message)
 
 	entry := models.SystemLog{
-		ID:        primitive.NewObjectID(),
+		ID:        uuid.New(),
 		Severity:  severity,
 		Category:  models.LogCatTenant,
 		Message:   message,
@@ -231,7 +231,7 @@ func (l *Logger) LogTenantActivity(ctx context.Context, severity models.LogSever
 		Metadata:  metadata,
 		CreatedAt: time.Now(),
 	}
-	if _, err := l.db.SystemLogs().InsertOne(ctx, entry); err != nil {
+	if _, err := l.db.Pool.Exec(ctx, "INSERT INTO system_logs (level, category, message, details, tenant_id, request_id) VALUES ($1, $2, $3, $4, $5, $6)", string(entry.Severity), string(entry.Category), entry.Message, entry.Metadata, entry.TenantID, ""); err != nil {
 		slog.Error("syslog: failed to write tenant activity log", "error", err)
 	}
 

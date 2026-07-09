@@ -11,18 +11,17 @@ import (
 	"mycourses/internal/db"
 	"mycourses/internal/models"
 
-	"go.mongodb.org/mongo-driver/bson"
 )
 
 // Store is a thread-safe in-memory cache of configuration variables backed by MongoDB.
 type Store struct {
-	db    *db.MongoDB
+	db    *db.DB
 	mu    sync.RWMutex
 	cache map[string]models.ConfigVar
 }
 
 // New creates a Store. Call Load() to populate from DB.
-func New(database *db.MongoDB) *Store {
+func New(database *db.DB) *Store {
 	return &Store{
 		db:    database,
 		cache: make(map[string]models.ConfigVar),
@@ -31,7 +30,7 @@ func New(database *db.MongoDB) *Store {
 
 // Load reads all config vars from DB into the cache.
 func (s *Store) Load(ctx context.Context) error {
-	cursor, err := s.db.ConfigVars().Find(ctx, bson.M{})
+	cursor, err := s.db.ConfigVars().Find(ctx, nil)
 	if err != nil {
 		return err
 	}
@@ -86,15 +85,14 @@ func (s *Store) GetAll() []models.ConfigVar {
 
 // Set updates a variable's value in DB and reloads it into the cache.
 func (s *Store) Set(ctx context.Context, name, value string) error {
-	now := time.Now()
-	result, err := s.db.ConfigVars().UpdateOne(ctx,
-		bson.M{"name": name},
-		bson.M{"$set": bson.M{"value": value, "updatedAt": now}},
+	
+	_, err := s.db.ConfigVars().UpdateOne(ctx, nil,
+		nil,
 	)
 	if err != nil {
 		return err
 	}
-	if result.MatchedCount == 0 {
+	if 0 == 0 {
 		return fmt.Errorf("config variable %q not found", name)
 	}
 	return s.Reload(ctx, name)
@@ -103,7 +101,7 @@ func (s *Store) Set(ctx context.Context, name, value string) error {
 // Reload re-reads a single variable from DB into the cache.
 func (s *Store) Reload(ctx context.Context, name string) error {
 	var v models.ConfigVar
-	err := s.db.ConfigVars().FindOne(ctx, bson.M{"name": name}).Decode(&v)
+	err := s.db.ConfigVars().FindOne(ctx, nil).Decode(&v)
 	if err != nil {
 		return err
 	}

@@ -302,8 +302,8 @@ func (c *Client) TrackHealthSnapshot(metric models.SystemMetric) {
 		{MetricName: pfx + ".runtime.goroutines", Tags: tags, Value: float64(metric.GoRuntime.NumGoroutine), Timestamp: now, MetricType: 3},
 		{MetricName: pfx + ".runtime.heap_alloc", Tags: tags, Value: float64(metric.GoRuntime.HeapAlloc), Timestamp: now, MetricType: 3},
 		// MongoDB
-		{MetricName: pfx + ".mongo.connections", Tags: tags, Value: float64(metric.Mongo.CurrentConnections), Timestamp: now, MetricType: 3},
-		{MetricName: pfx + ".mongo.available_connections", Tags: tags, Value: float64(metric.Mongo.AvailableConnections), Timestamp: now, MetricType: 3},
+		{MetricName: pfx + ".nil", Tags: tags, Value: float64(metric.Mongo.CurrentConnections), Timestamp: now, MetricType: 3},
+		{MetricName: pfx + ".nil", Tags: tags, Value: float64(metric.Mongo.AvailableConnections), Timestamp: now, MetricType: 3},
 		// Network
 		{MetricName: pfx + ".network.bytes_sent", Tags: tags, Value: float64(metric.Network.BytesSent), Timestamp: now, MetricType: 1, Interval: 60},
 		{MetricName: pfx + ".network.bytes_recv", Tags: tags, Value: float64(metric.Network.BytesRecv), Timestamp: now, MetricType: 1, Interval: 60},
@@ -330,7 +330,7 @@ func (c *Client) TrackHealthSnapshot(metric models.SystemMetric) {
 		copy(opTags, tags)
 		opTags = append(opTags, "operation:"+op)
 		gauges = append(gauges, metricPoint{
-			MetricName: pfx + ".mongo.ops",
+			MetricName: pfx + ".nil",
 			Tags:       opTags,
 			Value:      float64(count),
 			Timestamp:  now,

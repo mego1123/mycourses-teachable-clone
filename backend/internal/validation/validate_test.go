@@ -7,7 +7,6 @@ import (
 
 	"mycourses/internal/models"
 
-	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 func validUser() models.User {

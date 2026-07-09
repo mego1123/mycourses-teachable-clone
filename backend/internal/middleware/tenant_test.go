@@ -8,7 +8,6 @@ import (
 
 	"mycourses/internal/models"
 
-	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 func TestGetTenantFromContextMissing(t *testing.T) {

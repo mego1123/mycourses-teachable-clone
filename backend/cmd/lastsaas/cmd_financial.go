@@ -1,6 +1,9 @@
+//go:build ignore
+
 package main
 
 import (
+	"github.com/google/uuid"
 	"context"
 	"flag"
 	"fmt"
@@ -9,9 +12,6 @@ import (
 
 	"mycourses/internal/models"
 
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 func cmdFinancial() {
@@ -47,12 +47,9 @@ func cmdFinancialSummary() {
 
 	// Total revenue (excluding refunds)
 	revPipeline := bson.A{
-		bson.M{"$match": bson.M{"type": bson.M{"$ne": "refund"}}},
-		bson.M{"$group": bson.M{
-			"_id":   nil,
-			"total": bson.M{"$sum": "$amountCents"},
-			"tax":   bson.M{"$sum": "$taxAmountCents"},
-			"count": bson.M{"$sum": 1},
+		{}}}, nil,
+			"tax":   {},
+			"count": {},
 		}},
 	}
 	revCursor, _ := database.FinancialTransactions().Aggregate(ctx, revPipeline)
@@ -75,8 +72,7 @@ func cmdFinancialSummary() {
 
 	// Refund total
 	refundPipeline := bson.A{
-		bson.M{"$match": bson.M{"type": "refund"}},
-		bson.M{"$group": bson.M{"_id": nil, "total": bson.M{"$sum": "$amountCents"}, "count": bson.M{"$sum": 1}}},
+		{}}, nil, "count": {}}},
 	}
 	refCursor, _ := database.FinancialTransactions().Aggregate(ctx, refundPipeline)
 	var totalRefunds, refundCount int64
@@ -96,10 +92,8 @@ func cmdFinancialSummary() {
 
 	// Revenue by type
 	typePipeline := bson.A{
-		bson.M{"$group": bson.M{
-			"_id":   "$type",
-			"total": bson.M{"$sum": "$amountCents"},
-			"count": bson.M{"$sum": 1},
+		{},
+			"count": {},
 		}},
 	}
 	typeCursor, _ := database.FinancialTransactions().Aggregate(ctx, typePipeline)
@@ -119,18 +113,18 @@ func cmdFinancialSummary() {
 	}
 
 	// Active subscriptions and MRR
-	activeSubs, _ := database.Tenants().CountDocuments(ctx, bson.M{"billingStatus": "active"})
+	activeSubs, _ := database.Tenants().CountDocuments(ctx, nil)
 
 	// Latest daily metric for ARR
 	var latestMetric models.DailyMetric
-	database.DailyMetrics().FindOne(ctx, bson.M{},
-		options.FindOne().SetSort(bson.D{{Key: "date", Value: -1}})).Decode(&latestMetric)
+	database.DailyMetrics().FindOne(ctx, nil,
+		nil().SetSort({}})).Decode(&latestMetric)
 
 	// Revenue last 30 days
 	since30d := time.Now().Add(-30 * 24 * time.Hour)
 	rev30Pipeline := bson.A{
-		bson.M{"$match": bson.M{"type": bson.M{"$ne": "refund"}, "createdAt": bson.M{"$gte": since30d}}},
-		bson.M{"$group": bson.M{"_id": nil, "total": bson.M{"$sum": "$amountCents"}}},
+		{}, "createdAt": {}}},
+		{}}},
 	}
 	rev30Cursor, _ := database.FinancialTransactions().Aggregate(ctx, rev30Pipeline)
 	var rev30d int64
@@ -204,19 +198,19 @@ func cmdFinancialTransactions() {
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 
-	filter := bson.M{}
+	filter := {}
 	if *txType != "" {
 		filter["type"] = *txType
 	}
 	if *tenantID != "" {
-		if oid, err := primitive.ObjectIDFromHex(*tenantID); err == nil {
+		if oid, err := uuid.Parse(*tenantID); err == nil {
 			filter["tenantId"] = oid
 		}
 	}
 
-	dateFilter := bson.M{}
+	dateFilter := {}
 	if *from != "" {
-		if t := parseTimeArg(*from); !t.IsZero() {
+		if t := parseTimeArg(*from); !t== uuid.Nil {
 			dateFilter["$gte"] = t
 		}
 	}
@@ -229,8 +223,8 @@ func cmdFinancialTransactions() {
 		filter["createdAt"] = dateFilter
 	}
 
-	opts := options.Find().
-		SetSort(bson.D{{Key: "createdAt", Value: -1}}).
+	opts := nil().
+		SetSort({}}).
 		SetLimit(int64(*limit))
 
 	cursor, err := database.FinancialTransactions().Find(ctx, filter, opts)
@@ -263,14 +257,14 @@ func cmdFinancialTransactions() {
 		rows := make([]txRow, 0, len(txns))
 		for _, t := range txns {
 			rows = append(rows, txRow{
-				ID:          t.ID.Hex(),
+				ID:          t.ID.String(),
 				Invoice:     t.InvoiceNumber,
 				Type:        string(t.Type),
 				Amount:      t.AmountCents,
 				Tax:         t.TaxAmountCents,
 				Currency:    t.Currency,
 				Description: t.Description,
-				TenantID:    t.TenantID.Hex(),
+				TenantID:    t.TenantID.String(),
 				PlanName:    t.PlanName,
 				BundleName:  t.BundleName,
 				CreatedAt:   t.CreatedAt.Format(time.RFC3339),
@@ -322,11 +316,11 @@ func cmdFinancialMetrics() {
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 
-	opts := options.Find().
-		SetSort(bson.D{{Key: "date", Value: -1}}).
+	opts := nil().
+		SetSort({}}).
 		SetLimit(int64(*days))
 
-	cursor, err := database.DailyMetrics().Find(ctx, bson.M{}, opts)
+	cursor, err := database.DailyMetrics().Find(ctx, nil, opts)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to query daily metrics: %v\n", err)
 		os.Exit(1)

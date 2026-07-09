@@ -11,8 +11,6 @@ import (
 	"mycourses/internal/models"
 	"mycourses/internal/testutil"
 
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 func TestIntegration_AdminDashboard(t *testing.T) {

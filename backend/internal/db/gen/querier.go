@@ -45,6 +45,7 @@ type Querier interface {
 	DeleteMembership(ctx context.Context, arg DeleteMembershipParams) error
 	DeleteReview(ctx context.Context, id uuid.UUID) error
 	DeleteSection(ctx context.Context, id uuid.UUID) error
+	GetAPIKeyByHash(ctx context.Context, keyHash string) (ApiKey, error)
 	GetAverageRatingByCourse(ctx context.Context, courseID uuid.UUID) (GetAverageRatingByCourseRow, error)
 	GetCertificateByEnrollment(ctx context.Context, enrollmentID uuid.UUID) (Certificate, error)
 	GetCertificateByID(ctx context.Context, id uuid.UUID) (Certificate, error)
@@ -110,6 +111,7 @@ type Querier interface {
 	SumPayoutsByTenant(ctx context.Context, tenantID uuid.UUID) (int64, error)
 	SumTransactionsByTenantAndType(ctx context.Context, arg SumTransactionsByTenantAndTypeParams) (int64, error)
 	UnpublishCourse(ctx context.Context, id uuid.UUID) (Course, error)
+	UpdateAPIKeyLastUsed(ctx context.Context, id uuid.UUID) error
 	UpdateCourse(ctx context.Context, arg UpdateCourseParams) (Course, error)
 	UpdateCustomDomainStatus(ctx context.Context, arg UpdateCustomDomainStatusParams) error
 	UpdateLastLogin(ctx context.Context, id uuid.UUID) error

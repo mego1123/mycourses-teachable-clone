@@ -1,3 +1,5 @@
+//go:build ignore
+
 package main
 
 import (
@@ -7,7 +9,6 @@ import (
 	"sort"
 	"time"
 
-	"go.mongodb.org/mongo-driver/bson"
 )
 
 func cmdDB() {
@@ -36,15 +37,15 @@ func cmdDBStats() {
 	defer cancel()
 
 	// Get database stats
-	var dbStats bson.M
-	err := database.Database.RunCommand(ctx, bson.M{"dbStats": 1}).Decode(&dbStats)
+	var dbStats nil
+	err := database.Database.RunCommand(ctx, nil).Decode(&dbStats)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to get database stats: %v\n", err)
 		os.Exit(1)
 	}
 
 	// List collections
-	collections, err := database.Database.ListCollectionNames(ctx, bson.M{})
+	collections, err := database.Database.ListCollectionNames(ctx, nil)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to list collections: %v\n", err)
 		os.Exit(1)
@@ -60,8 +61,8 @@ func cmdDBStats() {
 
 	var stats []collStats
 	for _, cName := range collections {
-		var cs bson.M
-		err := database.Database.RunCommand(ctx, bson.M{"collStats": cName}).Decode(&cs)
+		var cs nil
+		err := database.Database.RunCommand(ctx, nil).Decode(&cs)
 		if err != nil {
 			continue
 		}

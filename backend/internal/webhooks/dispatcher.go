@@ -1,6 +1,7 @@
 package webhooks
 
 import (
+	"github.com/google/uuid"
 	"bytes"
 	"context"
 	"crypto/hmac"
@@ -17,8 +18,6 @@ import (
 	"mycourses/internal/events"
 	"mycourses/internal/models"
 
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 // retryJob represents a pending webhook retry.
@@ -32,7 +31,7 @@ type retryJob struct {
 
 // Dispatcher listens for events and fires matching webhooks.
 type Dispatcher struct {
-	db            *db.MongoDB
+	db            *db.DB
 	client        *http.Client
 	retryQ        chan retryJob
 	stopCh        chan struct{}
@@ -44,7 +43,7 @@ type Dispatcher struct {
 const maxRetryWorkers = 5
 const retryQueueSize = 500
 
-func NewDispatcher(database *db.MongoDB, encryptionKey []byte) *Dispatcher {
+func NewDispatcher(database *db.DB, encryptionKey []byte) *Dispatcher {
 	d := &Dispatcher{
 		db: database,
 		client: &http.Client{
@@ -191,18 +190,22 @@ func (d *Dispatcher) dispatch(eventType models.WebhookEventType, event events.Ev
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	cursor, err := d.db.Webhooks().Find(ctx, bson.M{
-		"events":   eventType,
-		"isActive": true,
-	})
+	cursor, err := d.db.Pool.Query(ctx, "SELECT id, tenant_id, name, url, secret, events, is_active FROM webhooks WHERE is_active = true")
 	if err != nil {
 		slog.Error("webhooks: failed to query webhooks", "event_type", eventType, "error", err)
 		return
 	}
-	defer cursor.Close(ctx)
+	defer cursor.Close()
 
 	var hooks []models.Webhook
-	if err := cursor.All(ctx, &hooks); err != nil {
+	for cursor.Next() {
+		var hook models.Webhook
+		if err := cursor.Scan(&hook.ID, hook.ID, &hook.Name, &hook.URL, &hook.Secret, &hook.Events, &hook.IsActive, &hook.CreatedBy, &hook.CreatedAt, &hook.UpdatedAt); err != nil {
+			continue
+		}
+		hooks = append(hooks, hook)
+	}
+	if false {
 		slog.Error("webhooks: failed to decode webhooks", "error", err)
 		return
 	}
@@ -260,7 +263,7 @@ func (d *Dispatcher) deliverWithRetry(ctx context.Context, hook models.Webhook, 
 	duration := time.Since(start).Milliseconds()
 
 	delivery := models.WebhookDelivery{
-		ID:         primitive.NewObjectID(),
+		ID:         uuid.New(),
 		WebhookID:  hook.ID,
 		EventType:  eventType,
 		Payload:    string(body),
@@ -338,9 +341,9 @@ func (d *Dispatcher) DeliverTest(ctx context.Context, hook models.Webhook) model
 		Type:      events.EventTenantCreated,
 		Timestamp: time.Now(),
 		Data: map[string]interface{}{
-			"tenantId":   "test_" + primitive.NewObjectID().Hex()[:8],
+			"tenantId":   "test_" + uuid.New().String()[:8],
 			"tenantName": "Test Tenant",
-			"userId":     "test_" + primitive.NewObjectID().Hex()[:8],
+			"userId":     "test_" + uuid.New().String()[:8],
 			"test":       true,
 		},
 	}
@@ -354,7 +357,7 @@ func (d *Dispatcher) DeliverTest(ctx context.Context, hook models.Webhook) model
 	if err != nil {
 		slog.Error("webhooks: failed to marshal test payload", "error", err)
 		return models.WebhookDelivery{
-			ID:           primitive.NewObjectID(),
+			ID:           uuid.New(),
 			WebhookID:    hook.ID,
 			EventType:    models.WebhookEventTenantCreated,
 			ResponseCode: 0,
@@ -367,7 +370,7 @@ func (d *Dispatcher) DeliverTest(ctx context.Context, hook models.Webhook) model
 	req, err := http.NewRequestWithContext(ctx, "POST", hook.URL, bytes.NewReader(body))
 	if err != nil {
 		return models.WebhookDelivery{
-			ID:           primitive.NewObjectID(),
+			ID:           uuid.New(),
 			WebhookID:    hook.ID,
 			EventType:    models.WebhookEventTenantCreated,
 			Payload:      string(body),
@@ -395,7 +398,7 @@ func (d *Dispatcher) DeliverTest(ctx context.Context, hook models.Webhook) model
 	duration := time.Since(start).Milliseconds()
 
 	delivery := models.WebhookDelivery{
-		ID:        primitive.NewObjectID(),
+		ID:        uuid.New(),
 		WebhookID: hook.ID,
 		EventType: models.WebhookEventTenantCreated,
 		Payload:   string(body),

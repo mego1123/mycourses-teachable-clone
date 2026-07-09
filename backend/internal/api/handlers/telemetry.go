@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"github.com/google/uuid"
 	"encoding/json"
 	"net/http"
 	"regexp"
@@ -11,7 +12,6 @@ import (
 	"mycourses/internal/models"
 	"mycourses/internal/telemetry"
 
-	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 const (
@@ -199,7 +199,7 @@ func (h *TelemetryHandler) TrackBatch(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 		event := models.TelemetryEvent{
-			ID:         primitive.NewObjectID(),
+			ID:         uuid.New(),
 			EventName:  e.Event,
 			Category:   models.TelemetryCategoryCustom,
 			UserID:     &user.ID,

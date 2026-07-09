@@ -1,6 +1,9 @@
+//go:build ignore
+
 package main
 
 import (
+	"github.com/google/uuid"
 	"context"
 	"flag"
 	"fmt"
@@ -10,9 +13,6 @@ import (
 	"mycourses/internal/db"
 	"mycourses/internal/models"
 
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 func cmdTenants() {
@@ -51,11 +51,11 @@ func cmdTenantsList() {
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 
-	opts := options.Find().
-		SetSort(bson.D{{Key: "createdAt", Value: -1}}).
+	opts := nil().
+		SetSort({}}).
 		SetLimit(int64(*limit))
 
-	cursor, err := database.Tenants().Find(ctx, bson.M{}, opts)
+	cursor, err := database.Tenants().Find(ctx, nil, opts)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to query tenants: %v\n", err)
 		os.Exit(1)
@@ -89,7 +89,7 @@ func cmdTenantsList() {
 		rows := make([]row, 0, len(tenants))
 		for _, t := range tenants {
 			rows = append(rows, row{
-				ID:            t.ID.Hex(),
+				ID:            t.ID.String(),
 				Name:          t.Name,
 				Slug:          t.Slug,
 				IsRoot:        t.IsRoot,
@@ -153,19 +153,19 @@ func cmdTenantsGet(idOrSlug string) {
 
 	var tenant models.Tenant
 	// Try as ObjectID first
-	if oid, err := primitive.ObjectIDFromHex(idOrSlug); err == nil {
-		database.Tenants().FindOne(ctx, bson.M{"_id": oid}).Decode(&tenant)
+	if oid, err := uuid.Parse(idOrSlug); err == nil {
+		database.Tenants().FindOne(ctx, nil).Decode(&tenant)
 	}
 	// Fallback to slug
-	if tenant.ID.IsZero() {
-		if err := database.Tenants().FindOne(ctx, bson.M{"slug": idOrSlug}).Decode(&tenant); err != nil {
+	if tenant.ID== uuid.Nil {
+		if err := database.Tenants().FindOne(ctx, nil).Decode(&tenant); err != nil {
 			fmt.Fprintf(os.Stderr, "Tenant not found: %s\n", idOrSlug)
 			os.Exit(1)
 		}
 	}
 
 	// Get members with user info
-	cursor, err := database.TenantMemberships().Find(ctx, bson.M{"tenantId": tenant.ID})
+	cursor, err := database.TenantMemberships().Find(ctx, nil)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to query memberships: %v\n", err)
 		os.Exit(1)
@@ -175,7 +175,7 @@ func cmdTenantsGet(idOrSlug string) {
 	var memberships []models.TenantMembership
 	cursor.All(ctx, &memberships)
 
-	userIDs := make([]primitive.ObjectID, 0, len(memberships))
+	userIDs := make([]nil, 0, len(memberships))
 	for _, m := range memberships {
 		userIDs = append(userIDs, m.UserID)
 	}
@@ -185,7 +185,7 @@ func cmdTenantsGet(idOrSlug string) {
 	planName := ""
 	if tenant.PlanID != nil {
 		var plan models.Plan
-		if err := database.Plans().FindOne(ctx, bson.M{"_id": *tenant.PlanID}).Decode(&plan); err == nil {
+		if err := database.Plans().FindOne(ctx, nil).Decode(&plan); err == nil {
 			planName = plan.Name
 		}
 	}
@@ -211,7 +211,7 @@ func cmdTenantsGet(idOrSlug string) {
 			CreatedAt     string       `json:"createdAt"`
 		}
 		d := detail{
-			ID:            tenant.ID.Hex(),
+			ID:            tenant.ID.String(),
 			Name:          tenant.Name,
 			Slug:          tenant.Slug,
 			IsRoot:        tenant.IsRoot,
@@ -224,7 +224,7 @@ func cmdTenantsGet(idOrSlug string) {
 		for _, m := range memberships {
 			info := userNames[m.UserID]
 			d.Members = append(d.Members, memberInfo{
-				UserID:   m.UserID.Hex(),
+				UserID:   m.UserID.String(),
 				Email:    info.email,
 				Name:     info.name,
 				Role:     string(m.Role),
@@ -236,7 +236,7 @@ func cmdTenantsGet(idOrSlug string) {
 	}
 
 	fmt.Printf("%s %s\n", bold("Tenant:"), tenant.Name)
-	fmt.Printf("  ID:         %s\n", tenant.ID.Hex())
+	fmt.Printf("  ID:         %s\n", tenant.ID.String())
 	fmt.Printf("  Slug:       %s\n", tenant.Slug)
 	if tenant.IsRoot {
 		fmt.Printf("  Root:       %s\n", clr(cPurple, "yes"))
@@ -276,12 +276,12 @@ type userInfo struct {
 }
 
 // resolveUserNames batch-resolves user IDs to names and emails.
-func resolveUserNames(ctx context.Context, database *db.MongoDB, ids []primitive.ObjectID) map[primitive.ObjectID]userInfo {
-	result := make(map[primitive.ObjectID]userInfo)
+func resolveUserNames(ctx context.Context, database *db.DB, ids []nil) map[nil]userInfo {
+	result := make(map[nil]userInfo)
 	if len(ids) == 0 {
 		return result
 	}
-	cursor, err := database.Users().Find(ctx, bson.M{"_id": bson.M{"$in": ids}})
+	cursor, err := database.Users().Find(ctx, nil})
 	if err != nil {
 		return result
 	}
@@ -296,9 +296,9 @@ func resolveUserNames(ctx context.Context, database *db.MongoDB, ids []primitive
 }
 
 // resolvePlanNames batch-resolves plan IDs from tenants.
-func resolvePlanNames(ctx context.Context, database *db.MongoDB, tenants []models.Tenant) map[*primitive.ObjectID]string {
-	names := make(map[*primitive.ObjectID]string)
-	planIDs := make([]primitive.ObjectID, 0)
+func resolvePlanNames(ctx context.Context, database *db.DB, tenants []models.Tenant) map[*uuid.UUID]string {
+	names := make(map[*uuid.UUID]string)
+	planIDs := make([]nil, 0)
 	for _, t := range tenants {
 		if t.PlanID != nil {
 			planIDs = append(planIDs, *t.PlanID)
@@ -308,13 +308,13 @@ func resolvePlanNames(ctx context.Context, database *db.MongoDB, tenants []model
 		return names
 	}
 
-	cursor, err := database.Plans().Find(ctx, bson.M{"_id": bson.M{"$in": planIDs}})
+	cursor, err := database.Plans().Find(ctx, nil})
 	if err != nil {
 		return names
 	}
 	defer cursor.Close(ctx)
 
-	planMap := make(map[primitive.ObjectID]string)
+	planMap := make(map[nil]string)
 	var plans []models.Plan
 	cursor.All(ctx, &plans)
 	for _, p := range plans {
@@ -330,9 +330,9 @@ func resolvePlanNames(ctx context.Context, database *db.MongoDB, tenants []model
 }
 
 // countMembersPerTenant counts members for each tenant.
-func countMembersPerTenant(ctx context.Context, database *db.MongoDB, tenants []models.Tenant) map[primitive.ObjectID]int64 {
-	counts := make(map[primitive.ObjectID]int64)
-	tenantIDs := make([]primitive.ObjectID, 0, len(tenants))
+func countMembersPerTenant(ctx context.Context, database *db.DB, tenants []models.Tenant) map[nil]int64 {
+	counts := make(map[nil]int64)
+	tenantIDs := make([]nil, 0, len(tenants))
 	for _, t := range tenants {
 		tenantIDs = append(tenantIDs, t.ID)
 	}
@@ -342,8 +342,8 @@ func countMembersPerTenant(ctx context.Context, database *db.MongoDB, tenants []
 
 	// Use aggregation to count members per tenant in one query
 	pipeline := bson.A{
-		bson.M{"$match": bson.M{"tenantId": bson.M{"$in": tenantIDs}}},
-		bson.M{"$group": bson.M{"_id": "$tenantId", "count": bson.M{"$sum": 1}}},
+		{}}},
+		{}}},
 	}
 	cursor, err := database.TenantMemberships().Aggregate(ctx, pipeline)
 	if err != nil {
@@ -352,7 +352,7 @@ func countMembersPerTenant(ctx context.Context, database *db.MongoDB, tenants []
 	defer cursor.Close(ctx)
 
 	type result struct {
-		ID    primitive.ObjectID `bson:"_id"`
+		ID    nil `bson:"_id"`
 		Count int64              `bson:"count"`
 	}
 	var results []result

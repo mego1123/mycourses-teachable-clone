@@ -9,7 +9,6 @@ import (
 	"mycourses/internal/models"
 	"mycourses/internal/testutil"
 
-	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 // --- ListWebhooks ---

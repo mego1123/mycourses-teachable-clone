@@ -22,7 +22,7 @@ import (
 )
 
 // sharedDB is a single DB connection shared across all tests in this package.
-var sharedDB *db.MongoDB
+var sharedDB *db.DB
 var sharedDBCleanup func()
 
 func TestMain(m *testing.M) {
@@ -36,7 +36,7 @@ func TestMain(m *testing.M) {
 
 // testEnv holds all services needed for handler integration tests.
 type testEnv struct {
-	DB              *db.MongoDB
+	DB              *db.DB
 	Config          *config.Config
 	JWTService      *auth.JWTService
 	PasswordService *auth.PasswordService

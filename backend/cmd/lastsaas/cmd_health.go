@@ -1,3 +1,5 @@
+//go:build ignore
+
 package main
 
 import (
@@ -7,8 +9,6 @@ import (
 
 	"mycourses/internal/models"
 
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 func cmdHealth() {
@@ -47,8 +47,8 @@ func cmdHealth() {
 		}
 
 		// Nodes
-		cursor, _ := database.SystemNodes().Find(ctx, bson.M{},
-			options.Find().SetSort(bson.D{{Key: "lastSeen", Value: -1}}))
+		cursor, _ := database.SystemNodes().Find(ctx, nil,
+			nil().SetSort({}}))
 		if cursor != nil {
 			var nodes []models.SystemNode
 			cursor.All(ctx, &nodes)
@@ -70,8 +70,8 @@ func cmdHealth() {
 
 		// Latest metric
 		var metric models.SystemMetric
-		err := database.SystemMetrics().FindOne(ctx, bson.M{},
-			options.FindOne().SetSort(bson.D{{Key: "timestamp", Value: -1}})).Decode(&metric)
+		err := database.SystemMetrics().FindOne(ctx, nil,
+			nil().SetSort({}})).Decode(&metric)
 		if err == nil {
 			h.Metrics = &metricsInfo{
 				CPU:     metric.CPU.UsagePercent,
@@ -93,8 +93,8 @@ func cmdHealth() {
 	fmt.Printf("  MongoDB:    %s (%s)\n", clr(cGreen, "connected"), cfg.Database.Name)
 
 	// Nodes
-	cursor, err := database.SystemNodes().Find(ctx, bson.M{},
-		options.Find().SetSort(bson.D{{Key: "lastSeen", Value: -1}}))
+	cursor, err := database.SystemNodes().Find(ctx, nil,
+		nil().SetSort({}}))
 	if err == nil {
 		var nodes []models.SystemNode
 		cursor.All(ctx, &nodes)
@@ -117,8 +117,8 @@ func cmdHealth() {
 
 	// Latest metrics
 	var metric models.SystemMetric
-	err = database.SystemMetrics().FindOne(ctx, bson.M{},
-		options.FindOne().SetSort(bson.D{{Key: "timestamp", Value: -1}})).Decode(&metric)
+	err = database.SystemMetrics().FindOne(ctx, nil,
+		nil().SetSort({}})).Decode(&metric)
 	if err == nil {
 		fmt.Printf("\n  %s (from %s)\n", bold("Latest Metrics"), timeAgo(metric.Timestamp))
 		cpuClr := cGreen

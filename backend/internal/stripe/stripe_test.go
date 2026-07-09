@@ -10,7 +10,6 @@ import (
 	"mycourses/internal/testutil"
 
 	gostripe "github.com/stripe/stripe-go/v82"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 func setupMockStripe(t *testing.T, handler http.HandlerFunc) (*httptest.Server, func()) {

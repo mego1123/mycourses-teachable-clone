@@ -8,16 +8,14 @@ import (
 	"mycourses/internal/db"
 	"mycourses/internal/models"
 
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/mongo"
 )
 
 // Seed ensures the system "Free" plan exists. Idempotent — will not overwrite.
-func Seed(ctx context.Context, database *db.MongoDB) error {
+func Seed(ctx context.Context, database *db.DB) error {
 	col := database.Plans()
 
-	err := col.FindOne(ctx, bson.M{"isSystem": true}).Err()
-	if err == mongo.ErrNoDocuments {
+	err := col.FindOne(ctx, nil).Err()
+	if err == nil {
 		now := time.Now()
 		plan := models.Plan{
 			Name:                 "Free",

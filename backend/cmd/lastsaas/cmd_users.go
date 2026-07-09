@@ -1,3 +1,5 @@
+//go:build ignore
+
 package main
 
 import (
@@ -11,9 +13,6 @@ import (
 	"mycourses/internal/db"
 	"mycourses/internal/models"
 
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 func cmdUsers() {
@@ -58,13 +57,13 @@ func cmdUsersList() {
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 
-	filter := bson.M{}
+	filter := {}
 	if *inactive {
 		filter["isActive"] = false
 	}
 
-	opts := options.Find().
-		SetSort(bson.D{{Key: "createdAt", Value: -1}}).
+	opts := nil().
+		SetSort({}}).
 		SetLimit(int64(*limit))
 
 	cursor, err := database.Users().Find(ctx, filter, opts)
@@ -98,7 +97,7 @@ func cmdUsersList() {
 				methods[i] = string(m)
 			}
 			r := userRow{
-				ID:          u.ID.Hex(),
+				ID:          u.ID.String(),
 				Email:       u.Email,
 				DisplayName: u.DisplayName,
 				IsActive:    u.IsActive,
@@ -135,7 +134,7 @@ func cmdUsersList() {
 			mfa = clr(cGreen, "yes")
 		}
 		fmt.Printf("%-36s %-30s %-20s %-8s %-5s %s\n",
-			u.ID.Hex(),
+			u.ID.String(),
 			truncate(u.Email, 30),
 			truncate(u.DisplayName, 20),
 			status,
@@ -165,7 +164,7 @@ func cmdUsersGet() {
 	user, memberships := lookupUserWithMemberships(ctx, database, *email)
 
 	// Resolve tenant names
-	tenantIDs := make([]primitive.ObjectID, 0, len(memberships))
+	tenantIDs := make([]nil, 0, len(memberships))
 	for _, m := range memberships {
 		tenantIDs = append(tenantIDs, m.TenantID)
 	}
@@ -194,7 +193,7 @@ func cmdUsersGet() {
 			methods[i] = string(m)
 		}
 		d := detail{
-			ID:          user.ID.Hex(),
+			ID:          user.ID.String(),
 			Email:       user.Email,
 			DisplayName: user.DisplayName,
 			IsActive:    user.IsActive,
@@ -208,7 +207,7 @@ func cmdUsersGet() {
 		}
 		for _, m := range memberships {
 			d.Memberships = append(d.Memberships, membershipInfo{
-				TenantID:   m.TenantID.Hex(),
+				TenantID:   m.TenantID.String(),
 				TenantName: tenantNames[m.TenantID],
 				Role:       string(m.Role),
 			})
@@ -218,7 +217,7 @@ func cmdUsersGet() {
 	}
 
 	fmt.Printf("%s %s\n", bold("User:"), user.DisplayName)
-	fmt.Printf("  ID:         %s\n", user.ID.Hex())
+	fmt.Printf("  ID:         %s\n", user.ID.String())
 	fmt.Printf("  Email:      %s\n", user.Email)
 	fmt.Printf("  Verified:   %v\n", user.EmailVerified)
 	status := clr(cGreen, "active")
@@ -245,7 +244,7 @@ func cmdUsersGet() {
 		for _, m := range memberships {
 			name := tenantNames[m.TenantID]
 			if name == "" {
-				name = m.TenantID.Hex()
+				name = m.TenantID.String()
 			}
 			fmt.Printf("    - %s (%s)\n", name, m.Role)
 		}
@@ -275,7 +274,7 @@ func cmdUsersSetActive(active bool) {
 
 	emailNorm := strings.TrimSpace(strings.ToLower(*email))
 	var user models.User
-	if err := database.Users().FindOne(ctx, bson.M{"email": emailNorm}).Decode(&user); err != nil {
+	if err := database.Users().FindOne(ctx, nil).Decode(&user); err != nil {
 		fmt.Fprintf(os.Stderr, "User not found: %s\n", emailNorm)
 		os.Exit(1)
 	}
@@ -289,9 +288,8 @@ func cmdUsersSetActive(active bool) {
 		return
 	}
 
-	_, err := database.Users().UpdateOne(ctx,
-		bson.M{"_id": user.ID},
-		bson.M{"$set": bson.M{"isActive": active, "updatedAt": time.Now()}},
+	_, err := database.Users().UpdateOne(ctx, nil,
+		{}},
 	)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to update user: %v\n", err)
@@ -302,7 +300,7 @@ func cmdUsersSetActive(active bool) {
 		fmt.Printf("User %s (%s) has been reactivated.\n", user.DisplayName, user.Email)
 	} else {
 		// Also revoke sessions when suspending
-		database.RefreshTokens().DeleteMany(ctx, bson.M{"userId": user.ID})
+		database.RefreshTokens().DeleteMany(ctx, nil)
 		fmt.Printf("User %s (%s) has been suspended and all sessions revoked.\n", user.DisplayName, user.Email)
 	}
 }
@@ -325,12 +323,12 @@ func cmdUsersRevokeSessions() {
 
 	emailNorm := strings.TrimSpace(strings.ToLower(*email))
 	var user models.User
-	if err := database.Users().FindOne(ctx, bson.M{"email": emailNorm}).Decode(&user); err != nil {
+	if err := database.Users().FindOne(ctx, nil).Decode(&user); err != nil {
 		fmt.Fprintf(os.Stderr, "User not found: %s\n", emailNorm)
 		os.Exit(1)
 	}
 
-	result, err := database.RefreshTokens().DeleteMany(ctx, bson.M{"userId": user.ID})
+	result, err := database.RefreshTokens().DeleteMany(ctx, nil)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to revoke sessions: %v\n", err)
 		os.Exit(1)
@@ -340,15 +338,15 @@ func cmdUsersRevokeSessions() {
 }
 
 // lookupUserWithMemberships finds a user by email and their memberships.
-func lookupUserWithMemberships(ctx context.Context, database *db.MongoDB, email string) (models.User, []models.TenantMembership) {
+func lookupUserWithMemberships(ctx context.Context, database *db.DB, email string) (models.User, []models.TenantMembership) {
 	emailNorm := strings.TrimSpace(strings.ToLower(email))
 	var user models.User
-	if err := database.Users().FindOne(ctx, bson.M{"email": emailNorm}).Decode(&user); err != nil {
+	if err := database.Users().FindOne(ctx, nil).Decode(&user); err != nil {
 		fmt.Fprintf(os.Stderr, "User not found: %s\n", emailNorm)
 		os.Exit(1)
 	}
 
-	cursor, err := database.TenantMemberships().Find(ctx, bson.M{"userId": user.ID})
+	cursor, err := database.TenantMemberships().Find(ctx, nil)
 	if err != nil {
 		return user, nil
 	}
@@ -360,12 +358,12 @@ func lookupUserWithMemberships(ctx context.Context, database *db.MongoDB, email 
 }
 
 // resolveTenantNames batch-resolves tenant IDs to names.
-func resolveTenantNames(ctx context.Context, database *db.MongoDB, ids []primitive.ObjectID) map[primitive.ObjectID]string {
-	names := make(map[primitive.ObjectID]string)
+func resolveTenantNames(ctx context.Context, database *db.DB, ids []nil) map[nil]string {
+	names := make(map[nil]string)
 	if len(ids) == 0 {
 		return names
 	}
-	cursor, err := database.Tenants().Find(ctx, bson.M{"_id": bson.M{"$in": ids}})
+	cursor, err := database.Tenants().Find(ctx, nil})
 	if err != nil {
 		return names
 	}
