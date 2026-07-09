@@ -1,9 +1,9 @@
 package models
 
 import (
+	"github.com/google/uuid"
 	"time"
 
-	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 type TokenType string
@@ -16,56 +16,56 @@ const (
 )
 
 type VerificationToken struct {
-	ID        primitive.ObjectID `json:"id" bson:"_id,omitempty"`
-	UserID    primitive.ObjectID `json:"userId" bson:"userId"`
-	Token     string             `json:"-" bson:"token"`
-	Type      TokenType          `json:"type" bson:"type"`
-	ExpiresAt time.Time          `json:"expiresAt" bson:"expiresAt"`
-	CreatedAt time.Time          `json:"createdAt" bson:"createdAt"`
-	UsedAt    *time.Time         `json:"usedAt,omitempty" bson:"usedAt,omitempty"`
+	ID        uuid.UUID `json:"id"`
+	UserID    uuid.UUID `json:"userId"`
+	Token     string             `json:"-"`
+	Type      TokenType          `json:"type"`
+	ExpiresAt time.Time          `json:"expiresAt"`
+	CreatedAt time.Time          `json:"createdAt"`
+	UsedAt    *time.Time         `json:"usedAt,omitempty"`
 }
 
 type RefreshToken struct {
-	ID           primitive.ObjectID `json:"id" bson:"_id,omitempty"`
-	UserID       primitive.ObjectID `json:"userId" bson:"userId"`
-	TokenHash    string             `json:"-" bson:"tokenHash"`
-	FamilyID     string             `json:"familyId,omitempty" bson:"familyId,omitempty"`
-	IPAddress    string             `json:"ipAddress,omitempty" bson:"ipAddress,omitempty"`
-	UserAgent    string             `json:"userAgent,omitempty" bson:"userAgent,omitempty"`
-	DeviceInfo   string             `json:"deviceInfo,omitempty" bson:"deviceInfo,omitempty"`
-	ExpiresAt    time.Time          `json:"expiresAt" bson:"expiresAt"`
-	CreatedAt    time.Time          `json:"createdAt" bson:"createdAt"`
-	LastActiveAt time.Time          `json:"lastActiveAt" bson:"lastActiveAt"`
-	IsRevoked    bool               `json:"isRevoked" bson:"isRevoked"`
+	ID           uuid.UUID `json:"id"`
+	UserID       uuid.UUID `json:"userId"`
+	TokenHash    string             `json:"-"`
+	FamilyID     string             `json:"familyId,omitempty"`
+	IPAddress    string             `json:"ipAddress,omitempty"`
+	UserAgent    string             `json:"userAgent,omitempty"`
+	DeviceInfo   string             `json:"deviceInfo,omitempty"`
+	ExpiresAt    time.Time          `json:"expiresAt"`
+	CreatedAt    time.Time          `json:"createdAt"`
+	LastActiveAt time.Time          `json:"lastActiveAt"`
+	IsRevoked    bool               `json:"isRevoked"`
 }
 
 type RevokedToken struct {
-	ID        primitive.ObjectID `json:"id" bson:"_id,omitempty"`
-	TokenHash string             `bson:"tokenHash"`
-	ExpiresAt time.Time          `bson:"expiresAt"`
-	CreatedAt time.Time          `bson:"createdAt"`
+	ID        uuid.UUID `json:"id"`
+	TokenHash string             
+	ExpiresAt time.Time          
+	CreatedAt time.Time          
 }
 
 type OAuthState struct {
-	ID        primitive.ObjectID `bson:"_id,omitempty"`
-	State     string             `bson:"state"`
-	ExpiresAt time.Time          `bson:"expiresAt"`
-	CreatedAt time.Time          `bson:"createdAt"`
+	ID        uuid.UUID 
+	State     string             
+	ExpiresAt time.Time          
+	CreatedAt time.Time          
 }
 
 type AuthCodeTokenData struct {
-	AccessToken  string `bson:"accessToken,omitempty"`
-	RefreshToken string `bson:"refreshToken,omitempty"`
-	MFAToken     string `bson:"mfaToken,omitempty"`
-	IsMFA        bool   `bson:"isMfa,omitempty"`
+	AccessToken  string 
+	RefreshToken string 
+	MFAToken     string 
+	IsMFA        bool   
 }
 
 type AuthCode struct {
-	ID        primitive.ObjectID `bson:"_id,omitempty"`
-	Code      string             `bson:"code"`
-	UserID    primitive.ObjectID `bson:"userId"`
-	TokenData AuthCodeTokenData  `bson:"tokenData"`
-	ExpiresAt time.Time          `bson:"expiresAt"`
-	UsedAt    *time.Time         `bson:"usedAt,omitempty"`
-	CreatedAt time.Time          `bson:"createdAt"`
+	ID        uuid.UUID 
+	Code      string             
+	UserID    uuid.UUID 
+	TokenData AuthCodeTokenData  
+	ExpiresAt time.Time          
+	UsedAt    *time.Time         
+	CreatedAt time.Time          
 }

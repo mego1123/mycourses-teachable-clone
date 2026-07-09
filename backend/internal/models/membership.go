@@ -1,9 +1,9 @@
 package models
 
 import (
+	"github.com/google/uuid"
 	"time"
 
-	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 type MemberRole string
@@ -15,12 +15,12 @@ const (
 )
 
 type TenantMembership struct {
-	ID        primitive.ObjectID `json:"id" bson:"_id,omitempty"`
-	UserID    primitive.ObjectID `json:"userId" bson:"userId" validate:"required"`
-	TenantID  primitive.ObjectID `json:"tenantId" bson:"tenantId" validate:"required"`
-	Role      MemberRole         `json:"role" bson:"role" validate:"required,valid_role"`
-	JoinedAt  time.Time          `json:"joinedAt" bson:"joinedAt" validate:"required"`
-	UpdatedAt time.Time          `json:"updatedAt" bson:"updatedAt" validate:"required"`
+	ID        uuid.UUID `json:"id"`
+	UserID    uuid.UUID `json:"userId" validate:"required"`
+	TenantID  uuid.UUID `json:"tenantId" validate:"required"`
+	Role      MemberRole         `json:"role" validate:"required,valid_role"`
+	JoinedAt  time.Time          `json:"joinedAt" validate:"required"`
+	UpdatedAt time.Time          `json:"updatedAt" validate:"required"`
 }
 
 var roleHierarchy = map[MemberRole]int{

@@ -1,9 +1,9 @@
 package models
 
 import (
+	"github.com/google/uuid"
 	"time"
 
-	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 // BillingStatus represents the current billing state of a tenant.
@@ -27,51 +27,51 @@ const (
 
 // FinancialTransaction records every payment event.
 type FinancialTransaction struct {
-	ID                   primitive.ObjectID  `json:"id" bson:"_id,omitempty"`
-	TenantID             primitive.ObjectID  `json:"tenantId" bson:"tenantId" validate:"required"`
-	UserID               primitive.ObjectID  `json:"userId" bson:"userId" validate:"required"`
-	Type                 TransactionType     `json:"type" bson:"type" validate:"required,oneof=subscription credit_purchase refund"`
-	AmountCents          int64               `json:"amountCents" bson:"amountCents"`
-	SubtotalCents        int64               `json:"subtotalCents" bson:"subtotalCents"`
-	TaxAmountCents       int64               `json:"taxAmountCents" bson:"taxAmountCents"`
-	Currency             string              `json:"currency" bson:"currency" validate:"required,len=3"`
-	Description          string              `json:"description" bson:"description"`
-	InvoiceNumber        string              `json:"invoiceNumber" bson:"invoiceNumber" validate:"required"`
-	StripeSessionID      string              `json:"stripeSessionId,omitempty" bson:"stripeSessionId,omitempty"`
-	StripeInvoiceID      string              `json:"stripeInvoiceId,omitempty" bson:"stripeInvoiceId,omitempty"`
-	StripeSubscriptionID string              `json:"stripeSubscriptionId,omitempty" bson:"stripeSubscriptionId,omitempty"`
-	PlanID               *primitive.ObjectID `json:"planId,omitempty" bson:"planId,omitempty"`
-	PlanName             string              `json:"planName,omitempty" bson:"planName,omitempty"`
-	BundleID             *primitive.ObjectID `json:"bundleId,omitempty" bson:"bundleId,omitempty"`
-	BundleName           string              `json:"bundleName,omitempty" bson:"bundleName,omitempty"`
-	BillingInterval      string              `json:"billingInterval,omitempty" bson:"billingInterval,omitempty"`
-	CreatedAt            time.Time           `json:"createdAt" bson:"createdAt" validate:"required"`
+	ID                   uuid.UUID  `json:"id"`
+	TenantID             uuid.UUID  `json:"tenantId" validate:"required"`
+	UserID               uuid.UUID  `json:"userId" validate:"required"`
+	Type                 TransactionType     `json:"type" validate:"required,oneof=subscription credit_purchase refund"`
+	AmountCents          int64               `json:"amountCents"`
+	SubtotalCents        int64               `json:"subtotalCents"`
+	TaxAmountCents       int64               `json:"taxAmountCents"`
+	Currency             string              `json:"currency" validate:"required,len=3"`
+	Description          string              `json:"description"`
+	InvoiceNumber        string              `json:"invoiceNumber" validate:"required"`
+	StripeSessionID      string              `json:"stripeSessionId,omitempty"`
+	StripeInvoiceID      string              `json:"stripeInvoiceId,omitempty"`
+	StripeSubscriptionID string              `json:"stripeSubscriptionId,omitempty"`
+	PlanID               *uuid.UUID `json:"planId,omitempty"`
+	PlanName             string              `json:"planName,omitempty"`
+	BundleID             *uuid.UUID `json:"bundleId,omitempty"`
+	BundleName           string              `json:"bundleName,omitempty"`
+	BillingInterval      string              `json:"billingInterval,omitempty"`
+	CreatedAt            time.Time           `json:"createdAt" validate:"required"`
 }
 
 // StripeMapping maps internal entities (plans, bundles) to Stripe Products/Prices.
 type StripeMapping struct {
-	ID              primitive.ObjectID `bson:"_id,omitempty"`
-	EntityType      string             `bson:"entityType"`
-	EntityID        primitive.ObjectID `bson:"entityId"`
-	StripePriceID   string             `bson:"stripePriceId"`
-	StripeProductID string             `bson:"stripeProductId"`
-	CreatedAt       time.Time          `bson:"createdAt"`
+	ID              uuid.UUID 
+	EntityType      string             
+	EntityID        uuid.UUID 
+	StripePriceID   string             
+	StripeProductID string             
+	CreatedAt       time.Time          
 }
 
 // InvoiceCounter is used for atomic invoice number generation.
 type InvoiceCounter struct {
-	ID    string `bson:"_id"`
-	Value int64  `bson:"value"`
+	ID    string 
+	Value int64  
 }
 
 // DailyMetric stores daily business metrics for dashboard charts.
 type DailyMetric struct {
-	ID        primitive.ObjectID `bson:"_id,omitempty"`
-	Date      string             `json:"date" bson:"date"`
-	DAU       int64              `json:"dau" bson:"dau"`
-	WAU       int64              `json:"wau" bson:"wau"`
-	MAU       int64              `json:"mau" bson:"mau"`
-	Revenue   int64              `json:"revenue" bson:"revenue"`
-	ARR       int64              `json:"arr" bson:"arr"`
-	CreatedAt time.Time          `json:"createdAt" bson:"createdAt"`
+	ID        uuid.UUID 
+	Date      string             `json:"date"`
+	DAU       int64              `json:"dau"`
+	WAU       int64              `json:"wau"`
+	MAU       int64              `json:"mau"`
+	Revenue   int64              `json:"revenue"`
+	ARR       int64              `json:"arr"`
+	CreatedAt time.Time          `json:"createdAt"`
 }

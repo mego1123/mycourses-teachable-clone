@@ -1,9 +1,9 @@
 package models
 
 import (
+	"github.com/google/uuid"
 	"time"
 
-	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 // Node status constants
@@ -16,84 +16,84 @@ const (
 
 // SystemNode represents a registered server instance.
 type SystemNode struct {
-	ID        primitive.ObjectID `json:"id" bson:"_id,omitempty"`
-	MachineID string             `json:"machineId" bson:"machineId"`
-	Hostname  string             `json:"hostname" bson:"hostname"`
-	Status    NodeStatus         `json:"status" bson:"status"`
-	StartedAt time.Time          `json:"startedAt" bson:"startedAt"`
-	LastSeen  time.Time          `json:"lastSeen" bson:"lastSeen"`
-	Version   string             `json:"version" bson:"version"`
-	GoVersion string             `json:"goVersion" bson:"goVersion"`
+	ID        uuid.UUID `json:"id"`
+	MachineID string             `json:"machineId"`
+	Hostname  string             `json:"hostname"`
+	Status    NodeStatus         `json:"status"`
+	StartedAt time.Time          `json:"startedAt"`
+	LastSeen  time.Time          `json:"lastSeen"`
+	Version   string             `json:"version"`
+	GoVersion string             `json:"goVersion"`
 }
 
 // SystemMetric represents a point-in-time metrics snapshot from a single node.
 type SystemMetric struct {
-	ID        primitive.ObjectID `json:"id" bson:"_id,omitempty"`
-	NodeID    string             `json:"nodeId" bson:"nodeId"`
-	Timestamp time.Time          `json:"timestamp" bson:"timestamp"`
-	CPU       CPUMetrics         `json:"cpu" bson:"cpu"`
-	Memory    MemoryMetrics      `json:"memory" bson:"memory"`
-	Disk      DiskMetrics        `json:"disk" bson:"disk"`
-	Network   NetworkMetrics     `json:"network" bson:"network"`
-	HTTP      HTTPMetrics        `json:"http" bson:"http"`
-	Mongo     MongoMetrics       `json:"mongo" bson:"mongo"`
-	GoRuntime    GoRuntimeMetrics        `json:"goRuntime" bson:"goRuntime"`
-	Integrations IntegrationCountMetrics `json:"integrations" bson:"integrations"`
+	ID        uuid.UUID `json:"id"`
+	NodeID    string             `json:"nodeId"`
+	Timestamp time.Time          `json:"timestamp"`
+	CPU       CPUMetrics         `json:"cpu"`
+	Memory    MemoryMetrics      `json:"memory"`
+	Disk      DiskMetrics        `json:"disk"`
+	Network   NetworkMetrics     `json:"network"`
+	HTTP      HTTPMetrics        `json:"http"`
+	Mongo     MongoMetrics       `json:"mongo"`
+	GoRuntime    GoRuntimeMetrics        `json:"goRuntime"`
+	Integrations IntegrationCountMetrics `json:"integrations"`
 }
 
 type CPUMetrics struct {
-	UsagePercent float64 `json:"usagePercent" bson:"usagePercent"`
-	NumCPU       int     `json:"numCpu" bson:"numCpu"`
+	UsagePercent float64 `json:"usagePercent"`
+	NumCPU       int     `json:"numCpu"`
 }
 
 type MemoryMetrics struct {
-	UsedBytes   uint64  `json:"usedBytes" bson:"usedBytes"`
-	TotalBytes  uint64  `json:"totalBytes" bson:"totalBytes"`
-	UsedPercent float64 `json:"usedPercent" bson:"usedPercent"`
+	UsedBytes   uint64  `json:"usedBytes"`
+	TotalBytes  uint64  `json:"totalBytes"`
+	UsedPercent float64 `json:"usedPercent"`
 }
 
 type DiskMetrics struct {
-	UsedBytes   uint64  `json:"usedBytes" bson:"usedBytes"`
-	TotalBytes  uint64  `json:"totalBytes" bson:"totalBytes"`
-	UsedPercent float64 `json:"usedPercent" bson:"usedPercent"`
+	UsedBytes   uint64  `json:"usedBytes"`
+	TotalBytes  uint64  `json:"totalBytes"`
+	UsedPercent float64 `json:"usedPercent"`
 }
 
 type NetworkMetrics struct {
-	BytesSent uint64 `json:"bytesSent" bson:"bytesSent"`
-	BytesRecv uint64 `json:"bytesRecv" bson:"bytesRecv"`
+	BytesSent uint64 `json:"bytesSent"`
+	BytesRecv uint64 `json:"bytesRecv"`
 }
 
 type HTTPMetrics struct {
-	RequestCount int64            `json:"requestCount" bson:"requestCount"`
-	LatencyP50   float64          `json:"latencyP50" bson:"latencyP50"`
-	LatencyP95   float64          `json:"latencyP95" bson:"latencyP95"`
-	LatencyP99   float64          `json:"latencyP99" bson:"latencyP99"`
-	StatusCodes  map[string]int64 `json:"statusCodes" bson:"statusCodes"`
-	ErrorRate4xx float64          `json:"errorRate4xx" bson:"errorRate4xx"`
-	ErrorRate5xx float64          `json:"errorRate5xx" bson:"errorRate5xx"`
+	RequestCount int64            `json:"requestCount"`
+	LatencyP50   float64          `json:"latencyP50"`
+	LatencyP95   float64          `json:"latencyP95"`
+	LatencyP99   float64          `json:"latencyP99"`
+	StatusCodes  map[string]int64 `json:"statusCodes"`
+	ErrorRate4xx float64          `json:"errorRate4xx"`
+	ErrorRate5xx float64          `json:"errorRate5xx"`
 }
 
 type MongoMetrics struct {
-	CurrentConnections   int32            `json:"currentConnections" bson:"currentConnections"`
-	AvailableConnections int32            `json:"availableConnections" bson:"availableConnections"`
-	DataSizeBytes        int64            `json:"dataSizeBytes" bson:"dataSizeBytes"`
-	IndexSizeBytes       int64            `json:"indexSizeBytes" bson:"indexSizeBytes"`
-	Collections          int32            `json:"collections" bson:"collections"`
-	OpCounters           map[string]int64 `json:"opCounters" bson:"opCounters"`
+	CurrentConnections   int32            `json:"currentConnections"`
+	AvailableConnections int32            `json:"availableConnections"`
+	DataSizeBytes        int64            `json:"dataSizeBytes"`
+	IndexSizeBytes       int64            `json:"indexSizeBytes"`
+	Collections          int32            `json:"collections"`
+	OpCounters           map[string]int64 `json:"opCounters"`
 }
 
 type GoRuntimeMetrics struct {
-	NumGoroutine int    `json:"numGoroutine" bson:"numGoroutine"`
-	HeapAlloc    uint64 `json:"heapAlloc" bson:"heapAlloc"`
-	HeapSys      uint64 `json:"heapSys" bson:"heapSys"`
-	GCPauseNs    uint64 `json:"gcPauseNs" bson:"gcPauseNs"`
-	NumGC        uint32 `json:"numGC" bson:"numGC"`
+	NumGoroutine int    `json:"numGoroutine"`
+	HeapAlloc    uint64 `json:"heapAlloc"`
+	HeapSys      uint64 `json:"heapSys"`
+	GCPauseNs    uint64 `json:"gcPauseNs"`
+	NumGC        uint32 `json:"numGC"`
 }
 
 type IntegrationCountMetrics struct {
-	StripeAPICalls  int64 `json:"stripeApiCalls" bson:"stripeApiCalls"`
-	ResendEmails    int64 `json:"resendEmails" bson:"resendEmails"`
-	DataDogAPICalls int64 `json:"datadogApiCalls" bson:"datadogApiCalls"`
+	StripeAPICalls  int64 `json:"stripeApiCalls"`
+	ResendEmails    int64 `json:"resendEmails"`
+	DataDogAPICalls int64 `json:"datadogApiCalls"`
 }
 
 // Integration health check types (in-memory only, no BSON persistence)

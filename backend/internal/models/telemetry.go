@@ -1,21 +1,21 @@
 package models
 
 import (
+	"github.com/google/uuid"
 	"time"
 
-	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 // TelemetryEvent represents a single telemetry event for product analytics.
 type TelemetryEvent struct {
-	ID         primitive.ObjectID     `json:"id" bson:"_id,omitempty"`
-	EventName  string                 `json:"eventName" bson:"eventName"`
-	Category   string                 `json:"category" bson:"category"`
-	UserID     *primitive.ObjectID    `json:"userId,omitempty" bson:"userId,omitempty"`
-	TenantID   *primitive.ObjectID    `json:"tenantId,omitempty" bson:"tenantId,omitempty"`
-	SessionID  string                 `json:"sessionId,omitempty" bson:"sessionId,omitempty"`
-	Properties map[string]interface{} `json:"properties,omitempty" bson:"properties,omitempty"`
-	CreatedAt  time.Time              `json:"createdAt" bson:"createdAt"`
+	ID         uuid.UUID     `json:"id"`
+	EventName  string                 `json:"eventName"`
+	Category   string                 `json:"category"`
+	UserID     *uuid.UUID    `json:"userId,omitempty"`
+	TenantID   *uuid.UUID    `json:"tenantId,omitempty"`
+	SessionID  string                 `json:"sessionId,omitempty"`
+	Properties map[string]interface{} `json:"properties,omitempty"`
+	CreatedAt  time.Time              `json:"createdAt"`
 }
 
 // Telemetry categories.

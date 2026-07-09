@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"net/http"
 
-	"mycourses/internal/db"
-	"mycourses/internal/models"
+	"github.com/google/uuid"
 
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
+	"mycourses/internal/db"
+	gen "mycourses/internal/db/gen"
+	"mycourses/internal/models"
 )
 
 const (
@@ -18,10 +18,10 @@ const (
 )
 
 type TenantMiddleware struct {
-	db *db.MongoDB
+	db *db.DB
 }
 
-func NewTenantMiddleware(database *db.MongoDB) *TenantMiddleware {
+func NewTenantMiddleware(database *db.DB) *TenantMiddleware {
 	return &TenantMiddleware{db: database}
 }
 
@@ -41,16 +41,23 @@ func (m *TenantMiddleware) RequireTenant(next http.Handler) http.Handler {
 			return
 		}
 
-		tenantID, err := primitive.ObjectIDFromHex(tenantIDStr)
+		tenantID, err := uuid.Parse(tenantIDStr)
 		if err != nil {
 			http.Error(w, `{"error":"Invalid tenant ID"}`, http.StatusBadRequest)
 			return
 		}
 
-		var tenant models.Tenant
-		err = m.db.Tenants().FindOne(r.Context(), bson.M{"_id": tenantID, "isActive": true}).Decode(&tenant)
+		// Query Postgres for tenant
+		pgTenant, err := m.db.Queries.GetTenantByID(r.Context(), tenantID)
 		if err != nil {
 			http.Error(w, `{"error":"Tenant not found"}`, http.StatusNotFound)
+			return
+		}
+
+		tenant := db.ToTenant(pgTenant)
+
+		if !tenant.IsActive {
+			http.Error(w, `{"error":"Tenant is not active"}`, http.StatusForbidden)
 			return
 		}
 
@@ -60,15 +67,17 @@ func (m *TenantMiddleware) RequireTenant(next http.Handler) http.Handler {
 			return
 		}
 
-		var membership models.TenantMembership
-		err = m.db.TenantMemberships().FindOne(r.Context(), bson.M{
-			"userId":   user.ID,
-			"tenantId": tenantID,
-		}).Decode(&membership)
+		// Query Postgres for membership
+		pgMembership, err := m.db.Queries.GetMembership(r.Context(), gen.GetMembershipParams{
+			TenantID: tenantID,
+			UserID:   user.ID,
+		})
 		if err != nil {
 			http.Error(w, `{"error":"Not a member of this tenant"}`, http.StatusForbidden)
 			return
 		}
+
+		membership := db.ToMembership(pgMembership)
 
 		ctx := context.WithValue(r.Context(), TenantContextKey, &tenant)
 		ctx = context.WithValue(ctx, MembershipContextKey, &membership)
@@ -87,8 +96,7 @@ func GetMembershipFromContext(ctx context.Context) (*models.TenantMembership, bo
 }
 
 // RequireActiveBilling returns middleware that blocks requests when the tenant's
-// billing status is not active (and not waived/root). This prevents users from
-// accessing paid features after subscription expiration or cancellation.
+// billing status is not active (and not waived/root).
 func RequireActiveBilling() func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -98,13 +106,11 @@ func RequireActiveBilling() func(http.Handler) http.Handler {
 				return
 			}
 
-			// Root tenant and billing-waived tenants are exempt
 			if tenant.IsRoot || tenant.BillingWaived {
 				next.ServeHTTP(w, r)
 				return
 			}
 
-			// Allow if billing status is active or none (free/unsubscribed tenants)
 			if tenant.BillingStatus == models.BillingStatusActive || tenant.BillingStatus == models.BillingStatusNone {
 				next.ServeHTTP(w, r)
 				return
@@ -116,8 +122,8 @@ func RequireActiveBilling() func(http.Handler) http.Handler {
 }
 
 // RequireEntitlement returns middleware that checks whether the tenant's plan
-// grants a specific boolean entitlement. Requires a DB handle to look up the plan.
-func RequireEntitlement(database *db.MongoDB, feature string) func(http.Handler) http.Handler {
+// grants a specific boolean entitlement.
+func RequireEntitlement(database *db.DB, feature string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			tenant, ok := GetTenantFromContext(r.Context())
@@ -126,7 +132,6 @@ func RequireEntitlement(database *db.MongoDB, feature string) func(http.Handler)
 				return
 			}
 
-			// Root tenant and billing-waived tenants get all features
 			if tenant.IsRoot || tenant.BillingWaived {
 				next.ServeHTTP(w, r)
 				return
@@ -137,11 +142,13 @@ func RequireEntitlement(database *db.MongoDB, feature string) func(http.Handler)
 				return
 			}
 
-			var plan models.Plan
-			if err := database.Plans().FindOne(r.Context(), bson.M{"_id": *tenant.PlanID}).Decode(&plan); err != nil {
+			pgPlan, err := database.Queries.GetPlanByID(r.Context(), *tenant.PlanID)
+			if err != nil {
 				http.Error(w, `{"error":"Plan not found"}`, http.StatusInternalServerError)
 				return
 			}
+
+			plan := db.ToPlan(pgPlan)
 
 			ent, exists := plan.Entitlements[feature]
 			if !exists || (ent.Type == models.EntitlementTypeBool && !ent.BoolValue) {

@@ -9,12 +9,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
+
 	"mycourses/internal/auth"
 	"mycourses/internal/db"
 	"mycourses/internal/models"
-
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 type contextKey string
@@ -27,10 +26,10 @@ const (
 
 type AuthMiddleware struct {
 	jwtService *auth.JWTService
-	db         *db.MongoDB
+	db         *db.DB
 }
 
-func NewAuthMiddleware(jwtService *auth.JWTService, database *db.MongoDB) *AuthMiddleware {
+func NewAuthMiddleware(jwtService *auth.JWTService, database *db.DB) *AuthMiddleware {
 	return &AuthMiddleware{
 		jwtService: jwtService,
 		db:         database,
@@ -80,18 +79,21 @@ func (m *AuthMiddleware) authenticateJWT(w http.ResponseWriter, r *http.Request,
 		return
 	}
 
-	userID, err := primitive.ObjectIDFromHex(claims.UserID)
+	userID, err := uuid.Parse(claims.UserID)
 	if err != nil {
 		http.Error(w, `{"error":"Invalid user ID"}`, http.StatusUnauthorized)
 		return
 	}
 
-	var user models.User
-	err = m.db.Users().FindOne(r.Context(), bson.M{"_id": userID}).Decode(&user)
+	// Query Postgres for user
+	pgUser, err := m.db.Queries.GetUserByID(r.Context(), userID)
 	if err != nil {
 		http.Error(w, `{"error":"User not found"}`, http.StatusUnauthorized)
 		return
 	}
+
+	// Convert to domain model
+	user := db.ToUser(pgUser)
 
 	if !user.IsActive {
 		http.Error(w, `{"error":"User account is inactive"}`, http.StatusUnauthorized)
@@ -109,34 +111,39 @@ func (m *AuthMiddleware) authenticateAPIKey(w http.ResponseWriter, r *http.Reque
 	hash := sha256.Sum256([]byte(rawKey))
 	keyHash := base64.RawURLEncoding.EncodeToString(hash[:])
 
-	var apiKey models.APIKey
-	err := m.db.APIKeys().FindOne(r.Context(), bson.M{
-		"keyHash":  keyHash,
-		"isActive": true,
-	}).Decode(&apiKey)
+	// Query Postgres for API key by hash
+	pgKey, err := m.db.Queries.GetAPIKeyByHash(r.Context(), keyHash)
 	if err != nil {
 		http.Error(w, `{"error":"Invalid API key"}`, http.StatusUnauthorized)
 		return
 	}
 
+	apiKey := db.ToAPIKey(pgKey)
+
 	// Look up key creator
-	var user models.User
-	err = m.db.Users().FindOne(r.Context(), bson.M{"_id": apiKey.CreatedBy}).Decode(&user)
-	if err != nil || !user.IsActive {
+	if apiKey.CreatedBy == uuid.Nil {
+		http.Error(w, `{"error":"API key owner not found"}`, http.StatusUnauthorized)
+		return
+	}
+
+	pgUser, err := m.db.Queries.GetUserByID(r.Context(), apiKey.CreatedBy)
+	if err != nil || !pgUser.IsActive {
 		http.Error(w, `{"error":"API key owner account is inactive"}`, http.StatusUnauthorized)
 		return
 	}
+
+	user := db.ToUser(pgUser)
 
 	ctx := context.WithValue(r.Context(), UserContextKey, &user)
 
 	// Admin keys: auto-resolve root tenant + admin membership
 	if apiKey.Authority == models.APIKeyAuthorityAdmin {
-		var rootTenant models.Tenant
-		err := m.db.Tenants().FindOne(r.Context(), bson.M{"isRoot": true}).Decode(&rootTenant)
+		pgTenant, err := m.db.Queries.GetRootTenant(r.Context())
 		if err != nil {
 			http.Error(w, `{"error":"System configuration error"}`, http.StatusInternalServerError)
 			return
 		}
+		rootTenant := db.ToTenant(pgTenant)
 		ctx = context.WithValue(ctx, TenantContextKey, &rootTenant)
 		ctx = context.WithValue(ctx, MembershipContextKey, &models.TenantMembership{
 			UserID:   user.ID,
@@ -151,9 +158,7 @@ func (m *AuthMiddleware) authenticateAPIKey(w http.ResponseWriter, r *http.Reque
 	go func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
-		now := time.Now()
-		_, _ = m.db.APIKeys().UpdateByID(ctx, apiKey.ID,
-			bson.M{"$set": bson.M{"lastUsedAt": now}})
+		m.db.Queries.UpdateAPIKeyLastUsed(ctx, apiKey.ID)
 	}()
 
 	next.ServeHTTP(w, r.WithContext(ctx))
@@ -163,7 +168,10 @@ func (m *AuthMiddleware) isTokenRevoked(ctx context.Context, rawToken string) bo
 	hash := sha256.Sum256([]byte(rawToken))
 	tokenHash := base64.StdEncoding.EncodeToString(hash[:])
 
-	count, err := m.db.RevokedTokens().CountDocuments(ctx, bson.M{"tokenHash": tokenHash})
+	// Query Postgres for revoked token
+	var count int64
+	err := m.db.Pool.QueryRow(ctx,
+		"SELECT COUNT(*) FROM revoked_tokens WHERE jti = $1", tokenHash).Scan(&count)
 	if err != nil {
 		slog.Warn("revoked-token lookup failed, denying access", "error", err)
 		return true
