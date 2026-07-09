@@ -6,6 +6,7 @@ package gen
 
 import (
 	"context"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -13,6 +14,7 @@ import (
 type Querier interface {
 	AdminCountUsers(ctx context.Context, dollar_1 string) (int64, error)
 	AdminListUsers(ctx context.Context, arg AdminListUsersParams) ([]User, error)
+	CancelInvitation(ctx context.Context, id uuid.UUID) error
 	CompleteEnrollment(ctx context.Context, id uuid.UUID) error
 	CountActiveTenants(ctx context.Context) (int64, error)
 	CountCompletedLessonsByEnrollment(ctx context.Context, enrollmentID uuid.UUID) (int64, error)
@@ -21,44 +23,70 @@ type Querier interface {
 	CountLessonsByCourse(ctx context.Context, courseID uuid.UUID) (int64, error)
 	CountMembersByRole(ctx context.Context, arg CountMembersByRoleParams) (int64, error)
 	CountMembershipsByTenant(ctx context.Context, tenantID uuid.UUID) (int64, error)
+	CountSystemLogs(ctx context.Context, arg CountSystemLogsParams) (int64, error)
 	CountTenants(ctx context.Context, arg CountTenantsParams) (int64, error)
+	CountUnreadMessages(ctx context.Context, userID uuid.UUID) (int64, error)
 	CountUsers(ctx context.Context) (int64, error)
+	CreateAnnouncement(ctx context.Context, arg CreateAnnouncementParams) (Announcement, error)
+	CreateBrandingAsset(ctx context.Context, arg CreateBrandingAssetParams) (BrandingAsset, error)
 	CreateCertificate(ctx context.Context, arg CreateCertificateParams) (Certificate, error)
 	CreateCoupon(ctx context.Context, arg CreateCouponParams) (CourseCoupon, error)
 	CreateCourse(ctx context.Context, arg CreateCourseParams) (Course, error)
+	CreateCreditBundle(ctx context.Context, arg CreateCreditBundleParams) (CreditBundle, error)
 	CreateCustomDomain(ctx context.Context, arg CreateCustomDomainParams) (CustomDomain, error)
+	CreateCustomPage(ctx context.Context, arg CreateCustomPageParams) (CustomPage, error)
 	CreateEnrollment(ctx context.Context, arg CreateEnrollmentParams) (Enrollment, error)
+	CreateEventDefinition(ctx context.Context, arg CreateEventDefinitionParams) (EventDefinition, error)
+	CreateInvitation(ctx context.Context, arg CreateInvitationParams) (Invitation, error)
 	CreateLesson(ctx context.Context, arg CreateLessonParams) (Lesson, error)
 	CreateMediaAsset(ctx context.Context, arg CreateMediaAssetParams) (MediaAsset, error)
 	CreateMembership(ctx context.Context, arg CreateMembershipParams) (TenantMembership, error)
+	CreateMessage(ctx context.Context, arg CreateMessageParams) (Message, error)
 	CreatePayout(ctx context.Context, arg CreatePayoutParams) (Payout, error)
 	CreatePlan(ctx context.Context, arg CreatePlanParams) (Plan, error)
+	CreatePromotion(ctx context.Context, arg CreatePromotionParams) (Promotion, error)
 	CreateReview(ctx context.Context, arg CreateReviewParams) (Review, error)
 	CreateSection(ctx context.Context, arg CreateSectionParams) (Section, error)
+	CreateSystemLog(ctx context.Context, arg CreateSystemLogParams) error
 	CreateTenant(ctx context.Context, arg CreateTenantParams) (Tenant, error)
 	CreateTransaction(ctx context.Context, arg CreateTransactionParams) (FinancialTransaction, error)
+	CreateUsageEvent(ctx context.Context, arg CreateUsageEventParams) (UsageEvent, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
+	CreateWebhook(ctx context.Context, arg CreateWebhookParams) (Webhook, error)
+	DeactivatePromotion(ctx context.Context, id uuid.UUID) error
+	DeleteAnnouncement(ctx context.Context, id uuid.UUID) error
+	DeleteBrandingAsset(ctx context.Context, arg DeleteBrandingAssetParams) error
+	DeleteConfigVar(ctx context.Context, key string) error
 	DeleteCoupon(ctx context.Context, id uuid.UUID) error
 	DeleteCourse(ctx context.Context, id uuid.UUID) error
+	DeleteCreditBundle(ctx context.Context, id uuid.UUID) error
 	DeleteCustomDomain(ctx context.Context, id uuid.UUID) error
+	DeleteCustomPage(ctx context.Context, arg DeleteCustomPageParams) error
+	DeleteEventDefinition(ctx context.Context, id uuid.UUID) error
 	DeleteLesson(ctx context.Context, id uuid.UUID) error
 	DeleteMembership(ctx context.Context, arg DeleteMembershipParams) error
 	DeleteReview(ctx context.Context, id uuid.UUID) error
 	DeleteSection(ctx context.Context, id uuid.UUID) error
+	DeleteWebhook(ctx context.Context, id uuid.UUID) error
 	GetAPIKeyByHash(ctx context.Context, keyHash string) (ApiKey, error)
 	GetAverageRatingByCourse(ctx context.Context, courseID uuid.UUID) (GetAverageRatingByCourseRow, error)
+	GetBrandingAssetByID(ctx context.Context, id uuid.UUID) (BrandingAsset, error)
+	GetBrandingConfigByTenant(ctx context.Context, tenantID uuid.UUID) (BrandingConfig, error)
 	GetCertificateByEnrollment(ctx context.Context, enrollmentID uuid.UUID) (Certificate, error)
 	GetCertificateByID(ctx context.Context, id uuid.UUID) (Certificate, error)
 	GetCertificateByToken(ctx context.Context, verificationToken string) (Certificate, error)
+	GetConfigVar(ctx context.Context, key string) (ConfigVar, error)
 	GetCouponByID(ctx context.Context, id uuid.UUID) (CourseCoupon, error)
 	GetCourseByID(ctx context.Context, id uuid.UUID) (Course, error)
 	GetCourseBySlug(ctx context.Context, arg GetCourseBySlugParams) (Course, error)
 	GetCourseCompletionPercentage(ctx context.Context, enrollmentID uuid.UUID) (int32, error)
 	GetCreatorProfileByTenant(ctx context.Context, tenantID uuid.UUID) (CreatorProfile, error)
 	GetCustomDomainByID(ctx context.Context, id uuid.UUID) (CustomDomain, error)
+	GetCustomPageBySlug(ctx context.Context, arg GetCustomPageBySlugParams) (CustomPage, error)
 	GetEnrollmentByCourseAndUser(ctx context.Context, arg GetEnrollmentByCourseAndUserParams) (Enrollment, error)
 	GetEnrollmentByID(ctx context.Context, id uuid.UUID) (Enrollment, error)
 	GetEnrollmentByStripeSessionID(ctx context.Context, stripeSessionID *string) (Enrollment, error)
+	GetInvitationByToken(ctx context.Context, tokenHash string) (Invitation, error)
 	GetLessonByID(ctx context.Context, id uuid.UUID) (Lesson, error)
 	GetMediaAssetByID(ctx context.Context, id uuid.UUID) (MediaAsset, error)
 	GetMembership(ctx context.Context, arg GetMembershipParams) (TenantMembership, error)
@@ -72,35 +100,53 @@ type Querier interface {
 	GetReviewByID(ctx context.Context, id uuid.UUID) (Review, error)
 	GetRootTenant(ctx context.Context) (Tenant, error)
 	GetSectionByID(ctx context.Context, id uuid.UUID) (Section, error)
+	GetSeverityCounts(ctx context.Context, createdAt time.Time) (GetSeverityCountsRow, error)
 	GetTenantByCustomDomain(ctx context.Context, domain string) (Tenant, error)
 	GetTenantByID(ctx context.Context, id uuid.UUID) (Tenant, error)
 	GetTenantBySlug(ctx context.Context, slug string) (Tenant, error)
+	GetUsageSummary(ctx context.Context, arg GetUsageSummaryParams) (int64, error)
 	GetUserByEmailNormalized(ctx context.Context, emailNormalized string) (User, error)
 	GetUserByID(ctx context.Context, id uuid.UUID) (User, error)
+	GetWebhookByID(ctx context.Context, id uuid.UUID) (Webhook, error)
 	HideReview(ctx context.Context, id uuid.UUID) error
 	IncrementCouponUsage(ctx context.Context, id uuid.UUID) error
 	ListActivePublicPlans(ctx context.Context) ([]Plan, error)
+	ListAllAnnouncements(ctx context.Context, arg ListAllAnnouncementsParams) ([]Announcement, error)
+	ListAllCustomPages(ctx context.Context, tenantID uuid.UUID) ([]CustomPage, error)
+	ListBrandingAssetsByTenant(ctx context.Context, tenantID uuid.UUID) ([]BrandingAsset, error)
 	ListCertificatesByUser(ctx context.Context, userID uuid.UUID) ([]Certificate, error)
+	ListConfigVars(ctx context.Context, dollar_1 string) ([]ConfigVar, error)
 	ListCouponsByTenant(ctx context.Context, arg ListCouponsByTenantParams) ([]CourseCoupon, error)
 	ListCoursesByTenant(ctx context.Context, arg ListCoursesByTenantParams) ([]Course, error)
+	ListCreditBundlesByTenant(ctx context.Context, tenantID *uuid.UUID) ([]CreditBundle, error)
+	ListCreditBundlesPublic(ctx context.Context) ([]CreditBundle, error)
 	ListCustomDomainsByTenant(ctx context.Context, tenantID uuid.UUID) ([]CustomDomain, error)
+	ListCustomPagesByTenant(ctx context.Context, tenantID uuid.UUID) ([]CustomPage, error)
 	ListEnrollmentsByTenant(ctx context.Context, arg ListEnrollmentsByTenantParams) ([]Enrollment, error)
 	ListEnrollmentsByUser(ctx context.Context, arg ListEnrollmentsByUserParams) ([]Enrollment, error)
+	ListEventDefinitions(ctx context.Context, dollar_1 bool) ([]EventDefinition, error)
+	ListInvitationsByTenant(ctx context.Context, arg ListInvitationsByTenantParams) ([]Invitation, error)
 	ListLessonsByCourse(ctx context.Context, courseID uuid.UUID) ([]Lesson, error)
 	ListLessonsBySection(ctx context.Context, sectionID uuid.UUID) ([]Lesson, error)
 	ListMarketplaceCourses(ctx context.Context, arg ListMarketplaceCoursesParams) ([]Course, error)
 	ListMediaAssetsByTenant(ctx context.Context, arg ListMediaAssetsByTenantParams) ([]MediaAsset, error)
 	ListMembershipsByTenant(ctx context.Context, arg ListMembershipsByTenantParams) ([]TenantMembership, error)
 	ListMembershipsByUser(ctx context.Context, userID uuid.UUID) ([]TenantMembership, error)
+	ListMessagesByUser(ctx context.Context, arg ListMessagesByUserParams) ([]Message, error)
 	ListPayoutsByTenant(ctx context.Context, arg ListPayoutsByTenantParams) ([]Payout, error)
 	ListPendingCustomDomains(ctx context.Context) ([]CustomDomain, error)
 	ListPreviewLessonsByCourse(ctx context.Context, courseID uuid.UUID) ([]Lesson, error)
 	ListProgressByEnrollment(ctx context.Context, enrollmentID uuid.UUID) ([]CourseProgress, error)
+	ListPromotions(ctx context.Context) ([]Promotion, error)
 	ListPublicReviewsByCourse(ctx context.Context, arg ListPublicReviewsByCourseParams) ([]Review, error)
+	ListPublishedAnnouncements(ctx context.Context, arg ListPublishedAnnouncementsParams) ([]Announcement, error)
 	ListSectionsByCourse(ctx context.Context, courseID uuid.UUID) ([]Section, error)
+	ListSystemLogs(ctx context.Context, arg ListSystemLogsParams) ([]SystemLog, error)
 	ListTenants(ctx context.Context, arg ListTenantsParams) ([]Tenant, error)
 	ListTransactionsByTenant(ctx context.Context, arg ListTransactionsByTenantParams) ([]FinancialTransaction, error)
 	ListUsers(ctx context.Context, arg ListUsersParams) ([]User, error)
+	ListWebhooksByTenant(ctx context.Context, tenantID uuid.UUID) ([]Webhook, error)
+	MarkMessageRead(ctx context.Context, arg MarkMessageReadParams) error
 	MarkStripeEventProcessed(ctx context.Context, arg MarkStripeEventProcessedParams) error
 	PublishCourse(ctx context.Context, id uuid.UUID) (Course, error)
 	RefundEnrollment(ctx context.Context, arg RefundEnrollmentParams) error
@@ -112,18 +158,27 @@ type Querier interface {
 	SumTransactionsByTenantAndType(ctx context.Context, arg SumTransactionsByTenantAndTypeParams) (int64, error)
 	UnpublishCourse(ctx context.Context, id uuid.UUID) (Course, error)
 	UpdateAPIKeyLastUsed(ctx context.Context, id uuid.UUID) error
+	UpdateAnnouncement(ctx context.Context, arg UpdateAnnouncementParams) (Announcement, error)
 	UpdateCourse(ctx context.Context, arg UpdateCourseParams) (Course, error)
+	UpdateCreditBundle(ctx context.Context, arg UpdateCreditBundleParams) (CreditBundle, error)
 	UpdateCustomDomainStatus(ctx context.Context, arg UpdateCustomDomainStatusParams) error
+	UpdateCustomPage(ctx context.Context, arg UpdateCustomPageParams) (CustomPage, error)
+	UpdateEventDefinition(ctx context.Context, arg UpdateEventDefinitionParams) (EventDefinition, error)
 	UpdateLastLogin(ctx context.Context, id uuid.UUID) error
 	UpdateLesson(ctx context.Context, arg UpdateLessonParams) (Lesson, error)
 	UpdateMediaAssetReady(ctx context.Context, arg UpdateMediaAssetReadyParams) error
 	UpdateMediaAssetStatus(ctx context.Context, arg UpdateMediaAssetStatusParams) error
 	UpdateMembershipRole(ctx context.Context, arg UpdateMembershipRoleParams) error
 	UpdatePayoutStatus(ctx context.Context, arg UpdatePayoutStatusParams) error
+	UpdatePromotion(ctx context.Context, arg UpdatePromotionParams) (Promotion, error)
 	UpdateSection(ctx context.Context, arg UpdateSectionParams) (Section, error)
 	UpdateTenantCommissionRate(ctx context.Context, arg UpdateTenantCommissionRateParams) error
 	UpdateTenantStripeConnect(ctx context.Context, arg UpdateTenantStripeConnectParams) error
+	UpdateUserPassword(ctx context.Context, arg UpdateUserPasswordParams) error
 	UpdateUserProfile(ctx context.Context, arg UpdateUserProfileParams) (User, error)
+	UpdateWebhook(ctx context.Context, arg UpdateWebhookParams) (Webhook, error)
+	UpsertBrandingConfig(ctx context.Context, arg UpsertBrandingConfigParams) (BrandingConfig, error)
+	UpsertConfigVar(ctx context.Context, arg UpsertConfigVarParams) (ConfigVar, error)
 	UpsertCreatorProfile(ctx context.Context, arg UpsertCreatorProfileParams) (CreatorProfile, error)
 	UpsertPlan(ctx context.Context, arg UpsertPlanParams) (Plan, error)
 	UpsertProgress(ctx context.Context, arg UpsertProgressParams) (CourseProgress, error)

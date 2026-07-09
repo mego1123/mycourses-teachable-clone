@@ -304,6 +304,20 @@ func (q *Queries) UpdateLastLogin(ctx context.Context, id uuid.UUID) error {
 	return err
 }
 
+const updateUserPassword = `-- name: UpdateUserPassword :exec
+UPDATE users SET password_hash = $2, updated_at = NOW() WHERE id = $1
+`
+
+type UpdateUserPasswordParams struct {
+	ID           uuid.UUID `json:"id"`
+	PasswordHash *string   `json:"password_hash"`
+}
+
+func (q *Queries) UpdateUserPassword(ctx context.Context, arg UpdateUserPasswordParams) error {
+	_, err := q.db.Exec(ctx, updateUserPassword, arg.ID, arg.PasswordHash)
+	return err
+}
+
 const updateUserProfile = `-- name: UpdateUserProfile :one
 UPDATE users SET display_name = $2, avatar_url = $3, bio = $4, locale_preference = $5, theme_preference = $6
 WHERE id = $1 AND deleted_at IS NULL RETURNING id, email, email_normalized, display_name, password_hash, auth_methods, google_id, github_id, microsoft_id, mfa_enabled, mfa_secret, mfa_encryption_key, recovery_codes, avatar_url, bio, locale_preference, theme_preference, email_verified, email_verified_at, consent_accepted_at, is_active, is_admin, deleted_at, last_login_at, created_at, updated_at

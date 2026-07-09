@@ -22,3 +22,5 @@ SELECT COUNT(*) FROM users WHERE deleted_at IS NULL;
 SELECT * FROM users WHERE deleted_at IS NULL AND ($1::text IS NULL OR $1 = '' OR email_normalized ILIKE '%' || $1 || '%') ORDER BY created_at DESC LIMIT $2 OFFSET $3;
 -- name: AdminCountUsers :one
 SELECT COUNT(*) FROM users WHERE deleted_at IS NULL AND ($1::text IS NULL OR $1 = '' OR email_normalized ILIKE '%' || $1 || '%');
+-- name: UpdateUserPassword :exec
+UPDATE users SET password_hash = $2, updated_at = NOW() WHERE id = $1;
