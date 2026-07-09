@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Payout Sent</title>
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9fafb;">
+  <div style="background-color: #ffffff; border-radius: 8px; padding: 40px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+    <h1 style="color: #111827; font-size: 24px; margin: 0 0 20px;">Payout Sent 💰</h1>
+    <p style="color: #4b5563; font-size: 16px; line-height: 1.6;">Hi {{.CreatorName}},</p>
+    <p style="color: #4b5563; font-size: 16px; line-height: 1.6;">
+      A payout of <strong style="color: #059669;">{{.Amount}}</strong> has been sent to your bank account.
+    </p>
+    <div style="background-color: #f3f4f6; border-radius: 6px; padding: 20px; margin: 20px 0;">
+      <p style="margin: 0; color: #4b5563; font-size: 14px;">Payout Details:</p>
+      <p style="margin: 5px 0 0; color: #111827; font-size: 16px; font-weight: 500;">Amount: {{.Amount}} {{.Currency}}</p>
+      <p style="margin: 5px 0 0; color: #111827; font-size: 16px; font-weight: 500;">Date: {{.PayoutDate}}</p>
+    </div>
+    <p style="color: #9ca3af; font-size: 14px;">
+      Please allow 2-5 business days for the funds to appear in your bank account.
+    </p>
+  </div>
+</body>
+</html>

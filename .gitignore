@@ -1,0 +1,41 @@
+# Build artifacts
+backend/bin/
+backend/coverage.out
+backend/coverage.html
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+backend/config/dev.yaml
+backend/config/prod.yaml
+
+# Go
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Data (embedded postgres test data)
+/tmp/mc-test-*
+/tmp/mc-handler-test-*

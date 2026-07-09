@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Enrollment Confirmation</title>
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9fafb;">
+  <div style="background-color: #ffffff; border-radius: 8px; padding: 40px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+    <h1 style="color: #111827; font-size: 24px; margin: 0 0 20px;">You're enrolled! 🎉</h1>
+    <p style="color: #4b5563; font-size: 16px; line-height: 1.6;">Hi {{.LearnerName}},</p>
+    <p style="color: #4b5563; font-size: 16px; line-height: 1.6;">
+      You've successfully enrolled in <strong>{{.CourseTitle}}</strong> by {{.CreatorName}}.
+    </p>
+    <p style="color: #4b5563; font-size: 16px; line-height: 1.6;">
+      You can start learning right away. Your progress will be saved automatically.
+    </p>
+    <a href="{{.CourseURL}}" style="display: inline-block; background-color: #4f46e5; color: #ffffff; text-decoration: none; padding: 12px 24px; border-radius: 6px; font-weight: 500; margin: 20px 0;">
+      Start Learning →
+    </a>
+    <p style="color: #9ca3af; font-size: 14px; margin-top: 30px;">
+      This email was sent because you enrolled in a course. You can manage your notification preferences in your account settings.
+    </p>
+  </div>
+</body>
+</html>

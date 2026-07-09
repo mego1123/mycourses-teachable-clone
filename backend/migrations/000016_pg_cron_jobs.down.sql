@@ -1,0 +1,1 @@
+-- pg_cron jobs are not explicitly unscheduled (safe to leave)

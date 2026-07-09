@@ -1,0 +1,10 @@
+{
+  "id": "30_cdn_options",
+  "question": "Compare CDN options for a course-selling SaaS that needs to stream video to learners globally. I need a frank comparison of: (1) Bunny CDN (bunny.net) — pricing model, edge storage, video streaming (HLS), token authentication, custom SSL for arbitrary custom domains, (2) CloudFront — pricing, complexity, integration with S3 + Lambda@Edge, signed URLs/cookies, custom domain SSL, (3) Cloudflare — R2 storage, Stream product, custom domain SSL via SaaS for Customers, (4) Mux — managed video transcoding + delivery, (5) Key consideration: the platform must serve videos branded with each creator's custom domain (e.g. academy.johndoe.com) and issue SSL certs for thousands of creator domains. Which is the best fit and why?",
+  "answer": "Hello there! I'm here to help you understand the jonradoff/lastsaas code repository.\n\nI couldn't find any information within the repository's documentation that directly addresses comparing CDN options for a course-selling SaaS or details about video streaming solutions like Bunny CDN, CloudFront, Cloudflare, or Mux.\n\nIf you have questions about the jonradoff/lastsaas codebase, its features, or how it's structured, please feel free to ask! I'd be happy to help you explore that.",
+  "meta": {
+    "totalBytes": 640,
+    "totalElapsedMs": 14950
+  },
+  "history_len": 0
+}
