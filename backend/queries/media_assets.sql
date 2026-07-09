@@ -7,3 +7,6 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *;
 UPDATE media_assets SET status = $2 WHERE id = $1;
 -- name: ListMediaAssetsByTenant :many
 SELECT * FROM media_assets WHERE tenant_id = $1 AND status != 'deleted' ORDER BY created_at DESC LIMIT $2 OFFSET $3;
+
+-- name: UpdateMediaAssetReady :exec
+UPDATE media_assets SET status = 'ready', duration_sec = $2, size_bytes = $3 WHERE id = $1;

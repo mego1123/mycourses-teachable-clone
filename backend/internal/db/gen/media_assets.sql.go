@@ -130,6 +130,21 @@ func (q *Queries) ListMediaAssetsByTenant(ctx context.Context, arg ListMediaAsse
 	return items, nil
 }
 
+const updateMediaAssetReady = `-- name: UpdateMediaAssetReady :exec
+UPDATE media_assets SET status = 'ready', duration_sec = $2, size_bytes = $3 WHERE id = $1
+`
+
+type UpdateMediaAssetReadyParams struct {
+	ID          uuid.UUID `json:"id"`
+	DurationSec int32     `json:"duration_sec"`
+	SizeBytes   int64     `json:"size_bytes"`
+}
+
+func (q *Queries) UpdateMediaAssetReady(ctx context.Context, arg UpdateMediaAssetReadyParams) error {
+	_, err := q.db.Exec(ctx, updateMediaAssetReady, arg.ID, arg.DurationSec, arg.SizeBytes)
+	return err
+}
+
 const updateMediaAssetStatus = `-- name: UpdateMediaAssetStatus :exec
 UPDATE media_assets SET status = $2 WHERE id = $1
 `

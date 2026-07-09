@@ -46,6 +46,9 @@ func setupCourseRoutes(router *mux.Router, pgURL string, platformDomain string) 
         }
         slog.Info("Connected to Postgres — course platform routes enabled")
 
+        // Seed creator plans and config defaults
+        seedCreatorData(ctx, pgDB)
+
         // Create Stripe Connect service (if configured)
         stripeSecretKey := os.Getenv("STRIPE_SECRET_KEY")
         stripeWebhookSecret := os.Getenv("STRIPE_CONNECT_WEBHOOK_SECRET")
@@ -84,6 +87,7 @@ func setupCourseRoutes(router *mux.Router, pgURL string, platformDomain string) 
         customDomainHandler := handlers.NewCustomDomainHandler(pgDB, cfClient)
         certificateHandler := handlers.NewCertificateHandler(pgDB)
         seoHandler := handlers.NewSEOHandler(pgDB, platformDomain)
+        mediaHandler := handlers.NewMediaHandler(pgDB)
 
         // Create storefront handler (with Stripe Connect if available)
         var storefrontHandler *handlers.StorefrontHandler
@@ -113,8 +117,12 @@ func setupCourseRoutes(router *mux.Router, pgURL string, platformDomain string) 
         storefront.HandleFunc("/checkout", storefrontHandler.CreateCheckout).Methods("POST")
 
         // === Creator studio routes (auth + creator/owner/admin role required) ===
-        // TODO: wire auth middleware once Postgres-based auth is implemented
+        // AuthBridge translates MongoDB user context to Postgres UUID
+        // NOTE: The existing RequireAuth middleware must run BEFORE AuthBridge.
+        // In production, the main.go router chain applies RequireAuth to /api/* routes.
+        // For now, we apply AuthBridge here so course handlers can get the Postgres user ID.
         creator := courseAPI.PathPrefix("/creator").Subrouter()
+        creator.Use(middleware.AuthBridge(pgDB))
         creator.HandleFunc("/courses", courseHandler.Create).Methods("POST")
         creator.HandleFunc("/courses", courseHandler.ListByCreator).Methods("GET")
         creator.HandleFunc("/courses/{id}", courseHandler.Get).Methods("GET")
@@ -131,6 +139,8 @@ func setupCourseRoutes(router *mux.Router, pgURL string, platformDomain string) 
         creator.HandleFunc("/courses/{courseId}/lessons", lessonHandler.ListByCourse).Methods("GET")
         creator.HandleFunc("/lessons/{id}", lessonHandler.Update).Methods("PUT")
         creator.HandleFunc("/lessons/{id}", lessonHandler.Delete).Methods("DELETE")
+        creator.HandleFunc("/media/upload", mediaHandler.GetUploadURL).Methods("POST")
+        creator.HandleFunc("/media/complete", mediaHandler.Complete).Methods("POST")
         creator.HandleFunc("/enrollments", enrollmentHandler.ListByCreator).Methods("GET")
         creator.HandleFunc("/coupons", couponHandler.List).Methods("GET")
         creator.HandleFunc("/coupons", couponHandler.Create).Methods("POST")
@@ -158,10 +168,15 @@ func setupCourseRoutes(router *mux.Router, pgURL string, platformDomain string) 
 
         // === Learner routes (auth required) ===
         learner := courseAPI.PathPrefix("/learner").Subrouter()
+        learner.Use(middleware.AuthBridge(pgDB))
         learner.HandleFunc("/enrollments", enrollmentHandler.ListMine).Methods("GET")
         learner.HandleFunc("/enrollments/{courseId}", enrollmentHandler.CreateEnrollment).Methods("POST")
         learner.HandleFunc("/progress/{lessonId}", progressHandler.Update).Methods("POST")
         learner.HandleFunc("/progress/course/{courseId}", progressHandler.GetByCourse).Methods("GET")
+
+        // Lesson content access — protected by enrollment check
+        // TODO: Wire RequireEnrollment once auth bridge is fully tested
+        // learner.HandleFunc("/lessons/{id}", lessonHandler.GetContent).Methods("GET")
         learner.HandleFunc("/certificates", certificateHandler.ListMine).Methods("GET")
 
         // === Public certificate verification (no auth) ===

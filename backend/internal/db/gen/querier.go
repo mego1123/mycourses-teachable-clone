@@ -114,6 +114,7 @@ type Querier interface {
 	UpdateCustomDomainStatus(ctx context.Context, arg UpdateCustomDomainStatusParams) error
 	UpdateLastLogin(ctx context.Context, id uuid.UUID) error
 	UpdateLesson(ctx context.Context, arg UpdateLessonParams) (Lesson, error)
+	UpdateMediaAssetReady(ctx context.Context, arg UpdateMediaAssetReadyParams) error
 	UpdateMediaAssetStatus(ctx context.Context, arg UpdateMediaAssetStatusParams) error
 	UpdateMembershipRole(ctx context.Context, arg UpdateMembershipRoleParams) error
 	UpdatePayoutStatus(ctx context.Context, arg UpdatePayoutStatusParams) error

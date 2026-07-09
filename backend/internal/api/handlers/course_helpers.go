@@ -8,19 +8,24 @@ import (
 	"mycourses/internal/middleware"
 )
 
-// getUserIDFromContext extracts the authenticated user ID from the request context.
-// TODO: wire to auth middleware once integrated with Postgres.
+// getUserIDFromContext extracts the Postgres user UUID from the request context.
+// Uses the AuthBridge middleware's context key.
 func getUserIDFromContext(r *http.Request) *uuid.UUID {
-	return nil
-}
-
-// getTenantIDFromContext extracts the tenant ID from the Postgres-resolved tenant in context.
-func getTenantIDFromContext(r *http.Request) *uuid.UUID {
-	tenant := middleware.GetPgTenantFromContext(r.Context())
-	if tenant == nil {
+	userID := middleware.GetPgUserIDFromContext(r.Context())
+	if userID == uuid.Nil {
 		return nil
 	}
-	return &tenant.ID
+	return &userID
+}
+
+// getTenantIDFromContext extracts the Postgres tenant UUID from the request context.
+// Checks both AuthBridge (from membership) and CustomDomainTenantMiddleware (from domain).
+func getTenantIDFromContext(r *http.Request) *uuid.UUID {
+	tenantID := middleware.GetPgTenantIDFromContext(r.Context())
+	if tenantID == uuid.Nil {
+		return nil
+	}
+	return &tenantID
 }
 
 func uuidNil() uuid.UUID { return uuid.Nil }
